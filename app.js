@@ -9,7 +9,7 @@ const CHARACTERISTIC_UUID =
   "c7a10002-6c9e-4d5d-a001-123456789abc";
 
 const AUTO_REFRESH_INTERVAL =
-  30000;
+  5000;
 
 
 // ======================================================

@@ -76,7 +76,7 @@ unsigned long lastPowerRead =
   0;
 
 const unsigned long POWER_READ_INTERVAL =
-  30000;
+  5000;
 
 const float EXTERNAL_POWER_THRESHOLD =
   4.35f;
