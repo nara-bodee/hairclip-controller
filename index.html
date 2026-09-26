@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>HairClip Controller</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <main class="container">
+
+    <h1>Hair Clip</h1>
+
+    <div class="status">
+      <span id="statusDot" class="dot disconnected"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+
+    <button id="connectButton" class="primary">
+      Connect
+    </button>
+
+    <section class="card">
+
+      <label for="messageInput">
+        Message
+      </label>
+
+      <input
+        id="messageInput"
+        type="text"
+        placeholder="Type your message..."
+        maxlength="100"
+      >
+
+      <button id="sendButton">
+        Send
+      </button>
+
+    </section>
+
+    <section class="card controls">
+
+      <div class="control-row">
+        <span>Scrolling</span>
+
+        <label class="switch">
+          <input
+            id="scrollToggle"
+            type="checkbox"
+            checked
+          >
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="control-row">
+        <span>Display</span>
+
+        <label class="switch">
+          <input
+            id="displayToggle"
+            type="checkbox"
+            checked
+          >
+          <span class="slider"></span>
+        </label>
+      </div>
+
+    </section>
+
+    <p id="log">
+      Ready
+    </p>
+
+  </main>
+
+  <script src="app.js"></script>
+
+</body>
+</html>
