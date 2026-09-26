@@ -18,7 +18,7 @@
 // VERSION
 // ======================================================
 
-#define FIRMWARE_VERSION "2.12.0"
+#define FIRMWARE_VERSION "1.0.0"
 
 
 // ======================================================
@@ -69,10 +69,16 @@ int textWidth = 0;
 
 
 const int scrollSpeed =
-  2;
+  1;
 
 const int frameDelay =
   25;
+
+// ขนาดข้อความ
+// 1 = ขนาดเดิม
+// 2 = ใหญ่ 2 เท่า
+const int TEXT_SCALE =
+  2;
 
 
 bool displayEnabled =
@@ -1738,10 +1744,7 @@ void showLowBatteryShutdownScreen() {
   );
 
 
-  sprite.pushSprite(
-    0,
-    0
-  );
+  pushScaledSprite();
 
 
   delay(
@@ -2998,6 +3001,132 @@ void handleCommand(
 
 
 // ======================================================
+// SCALE SPRITE TO DISPLAY
+// ======================================================
+
+void pushScaledSprite() {
+
+  if (
+    TEXT_SCALE <= 1
+  ) {
+
+    sprite.pushSprite(
+      0,
+      0
+    );
+
+    return;
+  }
+
+
+  const int sourceWidth =
+    sprite.width();
+
+
+  const int sourceHeight =
+    sprite.height();
+
+
+  const int outputWidth =
+    sourceWidth
+    *
+    TEXT_SCALE;
+
+
+  const int outputHeight =
+    sourceHeight
+    *
+    TEXT_SCALE;
+
+
+  const int offsetX =
+    (
+      tft.width()
+      -
+      outputWidth
+    )
+    /
+    2;
+
+
+  const int offsetY =
+    (
+      tft.height()
+      -
+      outputHeight
+    )
+    /
+    2;
+
+
+  static uint16_t scaledRow[240];
+
+
+  for (
+    int sourceY = 0;
+    sourceY < sourceHeight;
+    sourceY++
+  ) {
+
+    int outputX =
+      0;
+
+
+    for (
+      int sourceX = 0;
+      sourceX < sourceWidth;
+      sourceX++
+    ) {
+
+      uint16_t color =
+        sprite.readPixel(
+          sourceX,
+          sourceY
+        );
+
+
+      for (
+        int scaleX = 0;
+        scaleX < TEXT_SCALE;
+        scaleX++
+      ) {
+
+        scaledRow[outputX++] =
+          color;
+      }
+    }
+
+
+    for (
+      int scaleY = 0;
+      scaleY < TEXT_SCALE;
+      scaleY++
+    ) {
+
+      tft.pushImage(
+
+        offsetX,
+
+        offsetY
+          +
+        sourceY
+          *
+        TEXT_SCALE
+          +
+        scaleY,
+
+        outputWidth,
+
+        1,
+
+        scaledRow
+      );
+    }
+  }
+}
+
+
+// ======================================================
 // SETUP
 // ======================================================
 
@@ -3159,9 +3288,9 @@ void setup() {
 
 
   sprite.createSprite(
-    tft.width(),
-    tft.height()
-  );
+  tft.width() / TEXT_SCALE,
+  tft.height() / TEXT_SCALE
+);
 
 
   sprite.fillSprite(
@@ -3454,10 +3583,7 @@ void loop() {
     );
 
 
-    sprite.pushSprite(
-      0,
-      0
-    );
+    pushScaledSprite();
 
 
     if (
