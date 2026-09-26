@@ -2,8 +2,13 @@
     box-sizing: border-box;
   }
   
+  :root {
+    color-scheme: dark;
+  }
+  
   body {
     margin: 0;
+  
     min-height: 100vh;
   
     font-family:
@@ -12,173 +17,374 @@
       "Segoe UI",
       sans-serif;
   
-    background: #0f0f0f;
-    color: white;
+    background:
+      radial-gradient(
+        circle at top,
+        #22252b,
+        #0b0c0e 55%
+      );
   
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    color: white;
   }
   
-  .container {
-    width: min(420px, 100%);
-    padding: 30px 20px;
+  button,
+  input {
+    font: inherit;
+  }
+  
+  button {
+    border: 0;
+  }
+  
+  .app {
+    width: min(440px, 100%);
+    margin: 0 auto;
+  
+    padding:
+      45px
+      20px
+      60px;
+  }
+  
+  
+  /* Header */
+  
+  header {
+    text-align: center;
+  
+    margin-bottom: 28px;
+  }
+  
+  .eyebrow {
+    margin: 0;
+  
+    color: #7d8590;
+  
+    font-size: 12px;
+    font-weight: 700;
+  
+    letter-spacing: 2px;
   }
   
   h1 {
-    text-align: center;
-    margin-bottom: 20px;
+    margin:
+      7px
+      0
+      15px;
+  
+    font-size: 38px;
   }
   
-  .status {
-    display: flex;
-    justify-content: center;
+  
+  .status-badge {
+    display: inline-flex;
+  
     align-items: center;
   
     gap: 8px;
-    margin-bottom: 20px;
+  
+    padding:
+      8px
+      13px;
+  
+    border-radius: 999px;
+  
+    font-size: 14px;
+    font-weight: 600;
   }
   
-  .dot {
-    width: 10px;
-    height: 10px;
+  
+  .status-dot {
+    width: 9px;
+    height: 9px;
   
     border-radius: 50%;
   }
   
-  .connected {
-    background: #34c759;
+  
+  .status-badge.disconnected {
+    background: rgba(255, 69, 58, 0.12);
+  
+    color: #ff6961;
   }
   
-  .disconnected {
-    background: #ff3b30;
+  .status-badge.disconnected .status-dot {
+    background: #ff453a;
   }
   
-  .card {
-    background: #1c1c1e;
   
-    padding: 18px;
-    margin-top: 18px;
+  .status-badge.connected {
+    background: rgba(48, 209, 88, 0.12);
   
-    border-radius: 16px;
+    color: #4ade80;
   }
   
-  label {
-    display: block;
-    margin-bottom: 8px;
+  .status-badge.connected .status-dot {
+    background: #30d158;
   }
   
-  input[type="text"] {
+  
+  /* Buttons */
+  
+  .connect-button,
+  .send-button {
     width: 100%;
   
-    padding: 14px;
+    min-height: 50px;
   
-    border: none;
-    border-radius: 10px;
+    border-radius: 14px;
   
-    font-size: 16px;
-  
-    margin-bottom: 12px;
-  }
-  
-  button {
-    width: 100%;
-  
-    padding: 14px;
-  
-    border: none;
-    border-radius: 12px;
-  
-    font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
   
     cursor: pointer;
+  
+    transition:
+      transform 0.15s,
+      opacity 0.15s;
   }
   
-  .primary {
+  
+  .connect-button {
     background: #0a84ff;
+  
     color: white;
   }
   
-  #sendButton {
+  
+  .send-button {
+    margin-top: 13px;
+  
     background: #30d158;
-    color: black;
+  
+    color: #07160a;
   }
   
-  .controls {
+  
+  button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  
+  
+  button:disabled {
+    cursor: default;
+  
+    opacity: 0.35;
+  }
+  
+  
+  /* Cards */
+  
+  .card {
+    margin-top: 18px;
+  
+    padding: 19px;
+  
+    background: rgba(28, 28, 30, 0.92);
+  
+    border:
+      1px
+      solid
+      rgba(255, 255, 255, 0.06);
+  
+    border-radius: 18px;
+  }
+  
+  
+  .section-header {
     display: flex;
-    flex-direction: column;
   
-    gap: 20px;
+    justify-content: space-between;
+    align-items: center;
+  
+    margin-bottom: 10px;
   }
+  
+  
+  .section-header label {
+    font-weight: 700;
+  }
+  
+  
+  #characterCount {
+    color: #777;
+  
+    font-size: 12px;
+  }
+  
+  
+  #messageInput {
+    width: 100%;
+  
+    min-height: 50px;
+  
+    padding:
+      0
+      14px;
+  
+    border:
+      1px
+      solid
+      #343438;
+  
+    border-radius: 12px;
+  
+    outline: none;
+  
+    background: #111113;
+  
+    color: white;
+  
+    font-size: 16px;
+  }
+  
+  
+  #messageInput:focus {
+    border-color: #0a84ff;
+  }
+  
+  
+  #messageInput:disabled {
+    opacity: 0.45;
+  }
+  
+  
+  /* Controls */
   
   .control-row {
     display: flex;
   
     align-items: center;
     justify-content: space-between;
+  
+    gap: 20px;
   }
+  
+  
+  .control-row strong {
+    display: block;
+  
+    margin-bottom: 4px;
+  }
+  
+  
+  .control-row p {
+    margin: 0;
+  
+    color: #7d8590;
+  
+    font-size: 13px;
+  }
+  
+  
+  .divider {
+    height: 1px;
+  
+    margin:
+      18px
+      0;
+  
+    background: #303034;
+  }
+  
   
   /* Toggle */
   
   .switch {
     position: relative;
   
-    width: 50px;
-    height: 30px;
+    flex-shrink: 0;
   
-    margin: 0;
+    width: 52px;
+    height: 31px;
   }
+  
   
   .switch input {
     display: none;
   }
+  
   
   .slider {
     position: absolute;
   
     inset: 0;
   
-    background: #555;
-    border-radius: 30px;
+    border-radius: 31px;
+  
+    background: #4b4b4f;
   
     cursor: pointer;
   
     transition: 0.2s;
   }
   
+  
   .slider::before {
     content: "";
   
     position: absolute;
   
-    width: 24px;
-    height: 24px;
-  
-    left: 3px;
     top: 3px;
+    left: 3px;
   
-    background: white;
+    width: 25px;
+    height: 25px;
   
     border-radius: 50%;
   
+    background: white;
+  
     transition: 0.2s;
   }
+  
   
   .switch input:checked + .slider {
     background: #30d158;
   }
   
+  
   .switch input:checked + .slider::before {
-    transform: translateX(20px);
+    transform: translateX(21px);
   }
   
-  #log {
+  
+  .switch input:disabled + .slider {
+    opacity: 0.35;
+  
+    cursor: default;
+  }
+  
+  
+  /* Activity */
+  
+  .activity {
     margin-top: 20px;
   
-    text-align: center;
+    padding: 0 4px;
+  }
   
-    color: #888;
+  
+  .activity span {
+    display: block;
+  
+    margin-bottom: 5px;
+  
+    color: #65676c;
+  
+    font-size: 11px;
+  
+    text-transform: uppercase;
+  
+    letter-spacing: 1px;
+  }
+  
+  
+  .activity p {
+    margin: 0;
+  
+    color: #8e8e93;
   
     font-size: 13px;
+  
+    word-break: break-word;
   }

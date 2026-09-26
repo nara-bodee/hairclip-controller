@@ -29,48 +29,67 @@ const displayToggle =
 const statusText =
   document.getElementById("statusText");
 
-const statusDot =
-  document.getElementById("statusDot");
+const statusBadge =
+  document.getElementById("statusBadge");
+
+const characterCount =
+  document.getElementById("characterCount");
 
 const log =
   document.getElementById("log");
 
 
-// ==================== Status ====================
+// ==================== UI State ====================
 
-function setStatus(connected) {
+function setControlsEnabled(enabled) {
+
+  messageInput.disabled = !enabled;
+
+  sendButton.disabled = !enabled;
+
+  scrollToggle.disabled = !enabled;
+
+  displayToggle.disabled = !enabled;
+}
+
+
+function setConnectionStatus(connected) {
 
   if (connected) {
 
     statusText.textContent =
       "Connected";
 
-    statusDot.classList.remove(
+    statusBadge.classList.remove(
       "disconnected"
     );
 
-    statusDot.classList.add(
+    statusBadge.classList.add(
       "connected"
     );
 
     connectButton.textContent =
       "Disconnect";
 
+    setControlsEnabled(true);
+
   } else {
 
     statusText.textContent =
       "Disconnected";
 
-    statusDot.classList.remove(
+    statusBadge.classList.remove(
       "connected"
     );
 
-    statusDot.classList.add(
+    statusBadge.classList.add(
       "disconnected"
     );
 
     connectButton.textContent =
-      "Connect";
+      "Connect HairClip";
+
+    setControlsEnabled(false);
   }
 }
 
@@ -107,6 +126,10 @@ async function connectHairClip() {
     );
 
 
+    log.textContent =
+      "Connecting...";
+
+
     const server =
       await device.gatt.connect();
 
@@ -123,17 +146,19 @@ async function connectHairClip() {
       );
 
 
-    setStatus(true);
+    setConnectionStatus(true);
 
     log.textContent =
-      "HairClip connected";
+      `Connected to ${device.name}`;
 
   } catch (error) {
 
     console.error(error);
 
+    setConnectionStatus(false);
+
     log.textContent =
-      "Connection failed";
+      `Connection failed: ${error.message}`;
   }
 }
 
@@ -156,14 +181,14 @@ function handleDisconnected() {
 
   characteristic = null;
 
-  setStatus(false);
+  setConnectionStatus(false);
 
   log.textContent =
     "HairClip disconnected";
 }
 
 
-// ==================== Send BLE Command ====================
+// ==================== BLE Command ====================
 
 async function sendCommand(command) {
 
@@ -172,7 +197,7 @@ async function sendCommand(command) {
     log.textContent =
       "Connect HairClip first";
 
-    return;
+    return false;
   }
 
 
@@ -190,17 +215,21 @@ async function sendCommand(command) {
     log.textContent =
       `Sent: ${command}`;
 
+    return true;
+
   } catch (error) {
 
     console.error(error);
 
     log.textContent =
-      "Send failed";
+      `Send failed: ${error.message}`;
+
+    return false;
   }
 }
 
 
-// ==================== Buttons ====================
+// ==================== Connect Button ====================
 
 connectButton.addEventListener(
   "click",
@@ -221,33 +250,82 @@ connectButton.addEventListener(
 );
 
 
+// ==================== Message ====================
+
+messageInput.addEventListener(
+  "input",
+  () => {
+
+    characterCount.textContent =
+      `${messageInput.value.length} / 100`;
+  }
+);
+
+
 sendButton.addEventListener(
   "click",
-  () => {
+  async () => {
 
     const text =
       messageInput.value.trim();
 
 
     if (!text) {
+
+      log.textContent =
+        "Type a message first";
+
       return;
     }
 
 
-    sendCommand(
-      `TEXT:${text}`
+    sendButton.disabled = true;
+
+    sendButton.textContent =
+      "Sending...";
+
+
+    const success =
+      await sendCommand(
+        `TEXT:${text}`
+      );
+
+
+    sendButton.textContent =
+      success
+        ? "Sent ✓"
+        : "Send Message";
+
+
+    setTimeout(
+      () => {
+
+        sendButton.textContent =
+          "Send Message";
+
+        if (
+          device &&
+          device.gatt.connected
+        ) {
+
+          sendButton.disabled =
+            false;
+        }
+
+      },
+      900
     );
   }
 );
 
-
-// Enter = Send
 
 messageInput.addEventListener(
   "keydown",
   event => {
 
     if (event.key === "Enter") {
+
+      event.preventDefault();
 
       sendButton.click();
     }
@@ -259,19 +337,23 @@ messageInput.addEventListener(
 
 scrollToggle.addEventListener(
   "change",
-  () => {
+  async () => {
 
-    if (scrollToggle.checked) {
+    const command =
+      scrollToggle.checked
+        ? "SCROLL:ON"
+        : "SCROLL:OFF";
 
-      sendCommand(
-        "SCROLL:ON"
-      );
 
-    } else {
+    const success =
+      await sendCommand(command);
 
-      sendCommand(
-        "SCROLL:OFF"
-      );
+
+    if (!success) {
+
+      // คืน toggle กลับถ้าส่งไม่สำเร็จ
+      scrollToggle.checked =
+        !scrollToggle.checked;
     }
   }
 );
@@ -281,19 +363,27 @@ scrollToggle.addEventListener(
 
 displayToggle.addEventListener(
   "change",
-  () => {
+  async () => {
 
-    if (displayToggle.checked) {
+    const command =
+      displayToggle.checked
+        ? "DISPLAY:ON"
+        : "DISPLAY:OFF";
 
-      sendCommand(
-        "DISPLAY:ON"
-      );
 
-    } else {
+    const success =
+      await sendCommand(command);
 
-      sendCommand(
-        "DISPLAY:OFF"
-      );
+
+    if (!success) {
+
+      displayToggle.checked =
+        !displayToggle.checked;
     }
   }
 );
+
+
+// ==================== Initial UI ====================
+
+setConnectionStatus(false);

@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>HairClip Controller</title>
 
@@ -11,73 +15,117 @@
 
 <body>
 
-  <main class="container">
+  <main class="app">
 
-    <h1>Hair Clip</h1>
+    <header>
+      <p class="eyebrow">BLE CONTROLLER</p>
+      <h1>Hair Clip</h1>
 
-    <div class="status">
-      <span id="statusDot" class="dot disconnected"></span>
-      <span id="statusText">Disconnected</span>
-    </div>
+      <div id="statusBadge" class="status-badge disconnected">
+        <span class="status-dot"></span>
+        <span id="statusText">Disconnected</span>
+      </div>
+    </header>
 
-    <button id="connectButton" class="primary">
-      Connect
+
+    <button
+      id="connectButton"
+      class="connect-button"
+    >
+      Connect HairClip
     </button>
+
 
     <section class="card">
 
-      <label for="messageInput">
-        Message
-      </label>
+      <div class="section-header">
+        <label for="messageInput">
+          Message
+        </label>
+
+        <span id="characterCount">
+          0 / 100
+        </span>
+      </div>
 
       <input
         id="messageInput"
         type="text"
         placeholder="Type your message..."
         maxlength="100"
+        disabled
       >
 
-      <button id="sendButton">
-        Send
+      <button
+        id="sendButton"
+        class="send-button"
+        disabled
+      >
+        Send Message
       </button>
 
     </section>
 
-    <section class="card controls">
+
+    <section class="card">
 
       <div class="control-row">
-        <span>Scrolling</span>
+
+        <div>
+          <strong>Scrolling</strong>
+          <p>Move text across the display</p>
+        </div>
 
         <label class="switch">
           <input
             id="scrollToggle"
             type="checkbox"
             checked
+            disabled
           >
           <span class="slider"></span>
         </label>
+
       </div>
 
+
+      <div class="divider"></div>
+
+
       <div class="control-row">
-        <span>Display</span>
+
+        <div>
+          <strong>Display</strong>
+          <p>Turn the screen on or off</p>
+        </div>
 
         <label class="switch">
           <input
             id="displayToggle"
             type="checkbox"
             checked
+            disabled
           >
           <span class="slider"></span>
         </label>
+
       </div>
 
     </section>
 
-    <p id="log">
-      Ready
-    </p>
+
+    <div class="activity">
+
+      <span>Activity</span>
+
+      <p id="log">
+        Waiting for connection
+      </p>
+
+    </div>
 
   </main>
+
 
   <script src="app.js"></script>
 
