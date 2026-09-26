@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -8,25 +10,66 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>HairClip Controller</title>
+  <meta
+    name="theme-color"
+    content="#0b0c0e"
+  >
 
-  <link rel="stylesheet" href="style.css">
+  <title>
+    HairClip Controller
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+
 </head>
+
 
 <body>
 
   <main class="app">
 
-    <header>
-      <p class="eyebrow">BLE CONTROLLER</p>
-      <h1>Hair Clip</h1>
 
-      <div id="statusBadge" class="status-badge disconnected">
-        <span class="status-dot"></span>
-        <span id="statusText">Disconnected</span>
+    <!-- ========================================= -->
+    <!-- HEADER -->
+    <!-- ========================================= -->
+
+    <header>
+
+      <p class="eyebrow">
+        BLE CONTROLLER
+      </p>
+
+      <h1>
+        Hair Clip
+      </h1>
+
+
+      <div
+        id="statusBadge"
+        class="status-badge disconnected"
+      >
+
+        <span
+          class="status-dot"
+        ></span>
+
+        <span
+          id="statusText"
+        >
+          Disconnected
+        </span>
+
       </div>
+
     </header>
 
+
+    <!-- ========================================= -->
+    <!-- CONNECT -->
+    <!-- ========================================= -->
 
     <button
       id="connectButton"
@@ -36,25 +79,38 @@
     </button>
 
 
+    <!-- ========================================= -->
+    <!-- MESSAGE -->
+    <!-- ========================================= -->
+
     <section class="card">
 
       <div class="section-header">
-        <label for="messageInput">
+
+        <label
+          for="messageInput"
+        >
           Message
         </label>
 
-        <span id="characterCount">
+        <span
+          id="characterCount"
+        >
           0 / 100
         </span>
+
       </div>
+
 
       <input
         id="messageInput"
         type="text"
         placeholder="Type your message..."
         maxlength="100"
+        autocomplete="off"
         disabled
       >
+
 
       <button
         id="sendButton"
@@ -67,23 +123,43 @@
     </section>
 
 
+    <!-- ========================================= -->
+    <!-- CONTROLS -->
+    <!-- ========================================= -->
+
     <section class="card">
+
+
+      <!-- SCROLL -->
 
       <div class="control-row">
 
         <div>
-          <strong>Scrolling</strong>
-          <p>Move text across the display</p>
+
+          <strong>
+            Scrolling
+          </strong>
+
+          <p>
+            Move text across the display
+          </p>
+
         </div>
 
+
         <label class="switch">
+
           <input
             id="scrollToggle"
             type="checkbox"
             checked
             disabled
           >
-          <span class="slider"></span>
+
+          <span
+            class="slider"
+          ></span>
+
         </label>
 
       </div>
@@ -92,21 +168,36 @@
       <div class="divider"></div>
 
 
+      <!-- DISPLAY -->
+
       <div class="control-row">
 
         <div>
-          <strong>Display</strong>
-          <p>Turn the screen on or off</p>
+
+          <strong>
+            Display
+          </strong>
+
+          <p>
+            Turn the screen on or off
+          </p>
+
         </div>
 
+
         <label class="switch">
+
           <input
             id="displayToggle"
             type="checkbox"
             checked
             disabled
           >
-          <span class="slider"></span>
+
+          <span
+            class="slider"
+          ></span>
+
         </label>
 
       </div>
@@ -114,9 +205,15 @@
     </section>
 
 
+    <!-- ========================================= -->
+    <!-- ACTIVITY -->
+    <!-- ========================================= -->
+
     <div class="activity">
 
-      <span>Activity</span>
+      <span>
+        Activity
+      </span>
 
       <p id="log">
         Waiting for connection
@@ -124,10 +221,12 @@
 
     </div>
 
+
   </main>
 
 
   <script src="app.js"></script>
 
 </body>
+
 </html>

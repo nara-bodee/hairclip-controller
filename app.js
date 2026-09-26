@@ -1,157 +1,303 @@
+// ======================================================
+// BLE CONFIG
+// ======================================================
+
 const SERVICE_UUID =
   "c7a10001-6c9e-4d5d-a001-123456789abc";
+
 
 const CHARACTERISTIC_UUID =
   "c7a10002-6c9e-4d5d-a001-123456789abc";
 
 
+// ======================================================
+// BLE STATE
+// ======================================================
+
 let device = null;
+
 let characteristic = null;
 
 
-// ==================== Elements ====================
+// ======================================================
+// ELEMENTS
+// ======================================================
 
 const connectButton =
-  document.getElementById("connectButton");
+  document.getElementById(
+    "connectButton"
+  );
+
 
 const sendButton =
-  document.getElementById("sendButton");
+  document.getElementById(
+    "sendButton"
+  );
+
 
 const messageInput =
-  document.getElementById("messageInput");
+  document.getElementById(
+    "messageInput"
+  );
+
 
 const scrollToggle =
-  document.getElementById("scrollToggle");
+  document.getElementById(
+    "scrollToggle"
+  );
+
 
 const displayToggle =
-  document.getElementById("displayToggle");
+  document.getElementById(
+    "displayToggle"
+  );
+
 
 const statusText =
-  document.getElementById("statusText");
+  document.getElementById(
+    "statusText"
+  );
+
 
 const statusBadge =
-  document.getElementById("statusBadge");
+  document.getElementById(
+    "statusBadge"
+  );
+
 
 const characterCount =
-  document.getElementById("characterCount");
+  document.getElementById(
+    "characterCount"
+  );
+
 
 const log =
-  document.getElementById("log");
+  document.getElementById(
+    "log"
+  );
 
 
-// ==================== UI State ====================
+// ======================================================
+// ENABLE / DISABLE CONTROLS
+// ======================================================
 
-function setControlsEnabled(enabled) {
+function setControlsEnabled(
+  enabled
+) {
 
-  messageInput.disabled = !enabled;
+  messageInput.disabled =
+    !enabled;
 
-  sendButton.disabled = !enabled;
 
-  scrollToggle.disabled = !enabled;
+  sendButton.disabled =
+    !enabled;
 
-  displayToggle.disabled = !enabled;
+
+  scrollToggle.disabled =
+    !enabled;
+
+
+  displayToggle.disabled =
+    !enabled;
 }
 
 
-function setConnectionStatus(connected) {
+// ======================================================
+// CONNECTION STATUS
+// ======================================================
+
+function setConnectionStatus(
+  connected
+) {
 
   if (connected) {
 
     statusText.textContent =
       "Connected";
 
+
     statusBadge.classList.remove(
       "disconnected"
     );
+
 
     statusBadge.classList.add(
       "connected"
     );
 
+
     connectButton.textContent =
       "Disconnect";
 
-    setControlsEnabled(true);
+
+    setControlsEnabled(
+      true
+    );
 
   } else {
 
     statusText.textContent =
       "Disconnected";
 
+
     statusBadge.classList.remove(
       "connected"
     );
+
 
     statusBadge.classList.add(
       "disconnected"
     );
 
+
     connectButton.textContent =
       "Connect HairClip";
 
-    setControlsEnabled(false);
+
+    setControlsEnabled(
+      false
+    );
   }
 }
 
-// ==================== Sync State ====================
+
+// ======================================================
+// SYNC STATE FROM HAIRCLIP
+// ======================================================
 
 async function syncControllerState() {
 
-    if (!characteristic) {
-      return;
-    }
-  
-    try {
-  
-      const value =
-        await characteristic.readValue();
-  
-      const state =
-        new TextDecoder().decode(value);
-  
-      console.log(
-        "HairClip state:",
-        state
-      );
-  
-  
-      const parts =
-        state.split(",");
-  
-  
-      if (parts.length !== 2) {
-        throw new Error(
-          "Invalid state response"
-        );
-      }
-  
-  
-      const scrollState =
-        parts[0];
-  
-      const displayState =
-        parts[1];
-  
-  
-      scrollToggle.checked =
-        scrollState === "1";
-  
-      displayToggle.checked =
-        displayState === "1";
-  
-  
-      log.textContent =
-        "HairClip state synchronized";
-  
-    } catch (error) {
-  
-      console.error(error);
-  
-      log.textContent =
-        "Connected, but state sync failed";
-    }
+  if (!characteristic) {
+    return;
   }
-// ==================== Connect ====================
+
+
+  try {
+
+    const value =
+      await characteristic.readValue();
+
+
+    const response =
+      new TextDecoder().decode(
+        value
+      );
+
+
+    console.log(
+      "HairClip response:",
+      response
+    );
+
+
+    // --------------------------------------------------
+    // รูปแบบข้อมูล:
+    //
+    // 1,1
+    // HELLO WORLD
+    //
+    // บรรทัด 1 = Scroll, Display
+    // บรรทัด 2 = Message
+    // --------------------------------------------------
+
+
+    const newlineIndex =
+      response.indexOf("\n");
+
+
+    if (
+      newlineIndex === -1
+    ) {
+
+      throw new Error(
+        "Invalid HairClip response"
+      );
+    }
+
+
+    const state =
+      response
+        .slice(
+          0,
+          newlineIndex
+        )
+        .trim();
+
+
+    const currentMessage =
+      response
+        .slice(
+          newlineIndex + 1
+        )
+        .trim();
+
+
+    // ==================================================
+    // SCROLL / DISPLAY STATE
+    // ==================================================
+
+    const parts =
+      state.split(",");
+
+
+    if (
+      parts.length !== 2
+    ) {
+
+      throw new Error(
+        "Invalid state response"
+      );
+    }
+
+
+    const scrollState =
+      parts[0];
+
+
+    const displayState =
+      parts[1];
+
+
+    scrollToggle.checked =
+      scrollState === "1";
+
+
+    displayToggle.checked =
+      displayState === "1";
+
+
+    // ==================================================
+    // MESSAGE
+    // ==================================================
+
+    messageInput.value =
+      currentMessage;
+
+
+    characterCount.textContent =
+      `${currentMessage.length} / 100`;
+
+
+    log.textContent =
+      "HairClip state synchronized";
+
+
+  } catch (error) {
+
+    console.error(
+      error
+    );
+
+
+    log.textContent =
+      "Connected, but state sync failed";
+  }
+}
+
+
+// ======================================================
+// CONNECT
+// ======================================================
 
 async function connectHairClip() {
 
@@ -161,25 +307,41 @@ async function connectHairClip() {
       "Searching for HairClip...";
 
 
+    // --------------------------------------------------
+    // เปิด Bluetooth Device Picker
+    // --------------------------------------------------
+
     device =
       await navigator.bluetooth.requestDevice({
 
         filters: [
+
           {
-            name: "HairClip-V1"
+            name:
+              "HairClip-V1"
           }
+
         ],
 
         optionalServices: [
+
           SERVICE_UUID
+
         ]
 
       });
 
 
+    // --------------------------------------------------
+    // Disconnect Event
+    // --------------------------------------------------
+
     device.addEventListener(
+
       "gattserverdisconnected",
+
       handleDisconnected
+
     );
 
 
@@ -187,9 +349,17 @@ async function connectHairClip() {
       "Connecting...";
 
 
+    // --------------------------------------------------
+    // Connect GATT
+    // --------------------------------------------------
+
     const server =
       await device.gatt.connect();
 
+
+    // --------------------------------------------------
+    // Get Service
+    // --------------------------------------------------
 
     const service =
       await server.getPrimaryService(
@@ -197,27 +367,47 @@ async function connectHairClip() {
       );
 
 
-      characteristic =
+    // --------------------------------------------------
+    // Get Characteristic
+    // --------------------------------------------------
+
+    characteristic =
       await service.getCharacteristic(
         CHARACTERISTIC_UUID
       );
-    
-    
-    setConnectionStatus(true);
-    
-    
-    // อ่านสถานะจริงจาก HairClip
+
+
+    // --------------------------------------------------
+    // UI Connected
+    // --------------------------------------------------
+
+    setConnectionStatus(
+      true
+    );
+
+
+    // --------------------------------------------------
+    // โหลด State จริงจาก ESP32
+    // --------------------------------------------------
+
     await syncControllerState();
-    
-    
+
+
     log.textContent =
       `Connected to ${device.name}`;
-      
+
+
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      error
+    );
 
-    setConnectionStatus(false);
+
+    setConnectionStatus(
+      false
+    );
+
 
     log.textContent =
       `Connection failed: ${error.message}`;
@@ -225,7 +415,9 @@ async function connectHairClip() {
 }
 
 
-// ==================== Disconnect ====================
+// ======================================================
+// DISCONNECT
+// ======================================================
 
 function disconnectHairClip() {
 
@@ -239,20 +431,33 @@ function disconnectHairClip() {
 }
 
 
+// ======================================================
+// HANDLE DISCONNECT
+// ======================================================
+
 function handleDisconnected() {
 
-  characteristic = null;
+  characteristic =
+    null;
 
-  setConnectionStatus(false);
+
+  setConnectionStatus(
+    false
+  );
+
 
   log.textContent =
     "HairClip disconnected";
 }
 
 
-// ==================== BLE Command ====================
+// ======================================================
+// SEND BLE COMMAND
+// ======================================================
 
-async function sendCommand(command) {
+async function sendCommand(
+  command
+) {
 
   if (!characteristic) {
 
@@ -269,32 +474,48 @@ async function sendCommand(command) {
       new TextEncoder();
 
 
+    const data =
+      encoder.encode(
+        command
+      );
+
+
     await characteristic.writeValue(
-      encoder.encode(command)
+      data
     );
 
 
     log.textContent =
       `Sent: ${command}`;
 
+
     return true;
+
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      error
+    );
+
 
     log.textContent =
       `Send failed: ${error.message}`;
+
 
     return false;
   }
 }
 
 
-// ==================== Connect Button ====================
+// ======================================================
+// CONNECT BUTTON
+// ======================================================
 
 connectButton.addEventListener(
+
   "click",
+
   async () => {
 
     if (
@@ -309,27 +530,41 @@ connectButton.addEventListener(
       await connectHairClip();
     }
   }
+
 );
 
 
-// ==================== Message ====================
+// ======================================================
+// MESSAGE CHARACTER COUNT
+// ======================================================
 
 messageInput.addEventListener(
+
   "input",
+
   () => {
 
     characterCount.textContent =
       `${messageInput.value.length} / 100`;
   }
+
 );
 
 
+// ======================================================
+// SEND MESSAGE
+// ======================================================
+
 sendButton.addEventListener(
+
   "click",
+
   async () => {
 
     const text =
-      messageInput.value.trim();
+      messageInput
+        .value
+        .trim();
 
 
     if (!text) {
@@ -341,11 +576,21 @@ sendButton.addEventListener(
     }
 
 
-    sendButton.disabled = true;
+    // --------------------------------------------------
+    // Sending UI
+    // --------------------------------------------------
+
+    sendButton.disabled =
+      true;
+
 
     sendButton.textContent =
       "Sending...";
 
+
+    // --------------------------------------------------
+    // Send
+    // --------------------------------------------------
 
     const success =
       await sendCommand(
@@ -353,17 +598,33 @@ sendButton.addEventListener(
       );
 
 
-    sendButton.textContent =
-      success
-        ? "Sent ✓"
-        : "Send Message";
+    // --------------------------------------------------
+    // Result UI
+    // --------------------------------------------------
 
+    if (success) {
+
+      sendButton.textContent =
+        "Sent ✓";
+
+    } else {
+
+      sendButton.textContent =
+        "Send Message";
+    }
+
+
+    // --------------------------------------------------
+    // Reset Button Text
+    // --------------------------------------------------
 
     setTimeout(
+
       () => {
 
         sendButton.textContent =
           "Send Message";
+
 
         if (
           device &&
@@ -375,67 +636,104 @@ sendButton.addEventListener(
         }
 
       },
+
       900
     );
   }
+
 );
 
 
+// ======================================================
+// ENTER = SEND
+// ======================================================
+
 messageInput.addEventListener(
+
   "keydown",
+
   event => {
 
-    if (event.key === "Enter") {
+    if (
+      event.key === "Enter"
+    ) {
 
       event.preventDefault();
 
       sendButton.click();
     }
   }
+
 );
 
 
-// ==================== Scroll ====================
+// ======================================================
+// SCROLL TOGGLE
+// ======================================================
 
 scrollToggle.addEventListener(
+
   "change",
+
   async () => {
 
     const command =
       scrollToggle.checked
+
         ? "SCROLL:ON"
+
         : "SCROLL:OFF";
 
 
     const success =
-      await sendCommand(command);
+      await sendCommand(
+        command
+      );
 
+
+    // --------------------------------------------------
+    // ถ้าส่งไม่สำเร็จ
+    // คืน Toggle กลับ
+    // --------------------------------------------------
 
     if (!success) {
 
-      // คืน toggle กลับถ้าส่งไม่สำเร็จ
       scrollToggle.checked =
         !scrollToggle.checked;
     }
   }
+
 );
 
 
-// ==================== Display ====================
+// ======================================================
+// DISPLAY TOGGLE
+// ======================================================
 
 displayToggle.addEventListener(
+
   "change",
+
   async () => {
 
     const command =
       displayToggle.checked
+
         ? "DISPLAY:ON"
+
         : "DISPLAY:OFF";
 
 
     const success =
-      await sendCommand(command);
+      await sendCommand(
+        command
+      );
 
+
+    // --------------------------------------------------
+    // ถ้าส่งไม่สำเร็จ
+    // คืน Toggle กลับ
+    // --------------------------------------------------
 
     if (!success) {
 
@@ -443,9 +741,14 @@ displayToggle.addEventListener(
         !displayToggle.checked;
     }
   }
+
 );
 
 
-// ==================== Initial UI ====================
+// ======================================================
+// INITIAL UI
+// ======================================================
 
-setConnectionStatus(false);
+setConnectionStatus(
+  false
+);

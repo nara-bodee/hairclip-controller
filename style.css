@@ -1,10 +1,16 @@
+/* =====================================================
+   RESET
+===================================================== */
+
 * {
     box-sizing: border-box;
   }
   
+  
   :root {
     color-scheme: dark;
   }
+  
   
   body {
     margin: 0;
@@ -27,17 +33,28 @@
     color: white;
   }
   
+  
   button,
   input {
     font: inherit;
   }
   
+  
   button {
     border: 0;
   }
   
+  
+  /* =====================================================
+     APP
+  ===================================================== */
+  
   .app {
-    width: min(440px, 100%);
+    width: min(
+      440px,
+      100%
+    );
+  
     margin: 0 auto;
   
     padding:
@@ -47,13 +64,16 @@
   }
   
   
-  /* Header */
+  /* =====================================================
+     HEADER
+  ===================================================== */
   
   header {
     text-align: center;
   
     margin-bottom: 28px;
   }
+  
   
   .eyebrow {
     margin: 0;
@@ -66,6 +86,7 @@
     letter-spacing: 2px;
   }
   
+  
   h1 {
     margin:
       7px
@@ -75,6 +96,10 @@
     font-size: 38px;
   }
   
+  
+  /* =====================================================
+     STATUS
+  ===================================================== */
   
   .status-badge {
     display: inline-flex;
@@ -90,6 +115,7 @@
     border-radius: 999px;
   
     font-size: 14px;
+  
     font-weight: 600;
   }
   
@@ -102,29 +128,51 @@
   }
   
   
+  /* Disconnected */
+  
   .status-badge.disconnected {
-    background: rgba(255, 69, 58, 0.12);
+    background:
+      rgba(
+        255,
+        69,
+        58,
+        0.12
+      );
   
     color: #ff6961;
   }
   
-  .status-badge.disconnected .status-dot {
+  
+  .status-badge.disconnected
+  .status-dot {
     background: #ff453a;
   }
   
   
+  /* Connected */
+  
   .status-badge.connected {
-    background: rgba(48, 209, 88, 0.12);
+    background:
+      rgba(
+        48,
+        209,
+        88,
+        0.12
+      );
   
     color: #4ade80;
   }
   
-  .status-badge.connected .status-dot {
+  
+  .status-badge.connected
+  .status-dot {
     background: #30d158;
   }
   
   
-  /* Buttons */
+  /* =====================================================
+     BUTTONS
+  ===================================================== */
   
   .connect-button,
   .send-button {
@@ -144,12 +192,16 @@
   }
   
   
+  /* Connect */
+  
   .connect-button {
     background: #0a84ff;
   
     color: white;
   }
   
+  
+  /* Send */
   
   .send-button {
     margin-top: 13px;
@@ -172,29 +224,49 @@
   }
   
   
-  /* Cards */
+  /* =====================================================
+     CARD
+  ===================================================== */
   
   .card {
     margin-top: 18px;
   
     padding: 19px;
   
-    background: rgba(28, 28, 30, 0.92);
+    background:
+      rgba(
+        28,
+        28,
+        30,
+        0.92
+      );
   
     border:
       1px
       solid
-      rgba(255, 255, 255, 0.06);
+      rgba(
+        255,
+        255,
+        255,
+        0.06
+      );
   
     border-radius: 18px;
   }
   
   
+  /* =====================================================
+     MESSAGE
+  ===================================================== */
+  
   .section-header {
     display: flex;
   
-    justify-content: space-between;
-    align-items: center;
+    justify-content:
+      space-between;
+  
+    align-items:
+      center;
   
     margin-bottom: 10px;
   }
@@ -238,6 +310,11 @@
   }
   
   
+  #messageInput::placeholder {
+    color: #626268;
+  }
+  
+  
   #messageInput:focus {
     border-color: #0a84ff;
   }
@@ -248,13 +325,17 @@
   }
   
   
-  /* Controls */
+  /* =====================================================
+     CONTROL ROW
+  ===================================================== */
   
   .control-row {
     display: flex;
   
     align-items: center;
-    justify-content: space-between;
+  
+    justify-content:
+      space-between;
   
     gap: 20px;
   }
@@ -276,6 +357,10 @@
   }
   
   
+  /* =====================================================
+     DIVIDER
+  ===================================================== */
+  
   .divider {
     height: 1px;
   
@@ -283,11 +368,14 @@
       18px
       0;
   
-    background: #303034;
+    background:
+      #303034;
   }
   
   
-  /* Toggle */
+  /* =====================================================
+     TOGGLE
+  ===================================================== */
   
   .switch {
     position: relative;
@@ -338,29 +426,43 @@
   }
   
   
-  .switch input:checked + .slider {
+  .switch
+  input:checked
+  +
+  .slider {
     background: #30d158;
   }
   
   
-  .switch input:checked + .slider::before {
-    transform: translateX(21px);
+  .switch
+  input:checked
+  +
+  .slider::before {
+    transform:
+      translateX(21px);
   }
   
   
-  .switch input:disabled + .slider {
+  .switch
+  input:disabled
+  +
+  .slider {
     opacity: 0.35;
   
     cursor: default;
   }
   
   
-  /* Activity */
+  /* =====================================================
+     ACTIVITY
+  ===================================================== */
   
   .activity {
     margin-top: 20px;
   
-    padding: 0 4px;
+    padding:
+      0
+      4px;
   }
   
   
@@ -373,7 +475,8 @@
   
     font-size: 11px;
   
-    text-transform: uppercase;
+    text-transform:
+      uppercase;
   
     letter-spacing: 1px;
   }
@@ -386,5 +489,25 @@
   
     font-size: 13px;
   
-    word-break: break-word;
+    word-break:
+      break-word;
+  }
+  
+  
+  /* =====================================================
+     MOBILE
+  ===================================================== */
+  
+  @media (
+    max-width: 480px
+  ) {
+  
+    .app {
+      padding-top: 35px;
+    }
+  
+  
+    h1 {
+      font-size: 34px;
+    }
   }
