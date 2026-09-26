@@ -18,7 +18,23 @@
 // VERSION
 // ======================================================
 
-#define FIRMWARE_VERSION "2.10"
+#define FIRMWARE_VERSION "2.12.0"
+
+
+// ======================================================
+// PRODUCTION SETTINGS
+// ======================================================
+
+// true  = แสดง Serial debug
+// false = Production mode
+const bool DEBUG_MODE =
+  false;
+
+
+// IMPORTANT:
+// Production ต้องเป็น false เสมอ
+const bool LOW_BATTERY_TEST_MODE =
+  false;
 
 
 // ======================================================
@@ -37,28 +53,44 @@
 // ======================================================
 
 TFT_eSPI tft = TFT_eSPI();
-TFT_eSprite sprite = TFT_eSprite(&tft);
+
+TFT_eSprite sprite =
+  TFT_eSprite(&tft);
 
 U8g2_for_TFT_eSPI u8f;
 
-String message = "HELLO WORLD!";
+
+String message =
+  "HELLO WORLD!";
+
 
 int x = 0;
 int textWidth = 0;
 
-const int scrollSpeed = 2;
-const int frameDelay = 25;
 
-bool displayEnabled = true;
-bool scrollEnabled = true;
+const int scrollSpeed =
+  2;
+
+const int frameDelay =
+  25;
+
+
+bool displayEnabled =
+  true;
+
+bool scrollEnabled =
+  true;
 
 
 // ======================================================
 // ICON CONFIG
 // ======================================================
 
-const int ICON_WIDTH = 30;
-const int ICON_GAP = 4;
+const int ICON_WIDTH =
+  30;
+
+const int ICON_GAP =
+  4;
 
 
 // ======================================================
@@ -71,39 +103,55 @@ enum PowerSource {
   POWER_EXTERNAL
 };
 
+
 PowerSource powerSource =
   POWER_UNKNOWN;
+
 
 float batteryVoltage =
   0.0f;
 
+
 int batteryPercent =
   -1;
 
+
 float powerSenseVoltage =
   0.0f;
+
 
 unsigned long lastPowerRead =
   0;
 
 
-// อ่านแรงดันทุก 5 วินาที
+// ESP32 วัดไฟทุก 5 วินาที
 const unsigned long POWER_READ_INTERVAL =
   5000;
 
 
 // จากการทดสอบจริง
-// Battery ≈ 3.x–4.2V
-// USB ≈ 4.6–4.7V
+// Battery ~3.x–4.2V
+// USB ~4.6–4.7V
 const float EXTERNAL_POWER_THRESHOLD =
   4.35f;
 
 
 // ======================================================
-// LOW BATTERY PROTECTION
+// BATTERY SAFETY
 // ======================================================
 
-// เริ่มถือว่าแบตต่ำ
+enum BatterySafetyState {
+  BATTERY_SAFE,
+  BATTERY_LOW,
+  BATTERY_CRITICAL
+};
+
+
+BatterySafetyState batterySafetyState =
+  BATTERY_SAFE;
+
+
+// เริ่ม Low
 const float LOW_BATTERY_VOLTAGE =
   3.60f;
 
@@ -113,14 +161,18 @@ const float CRITICAL_BATTERY_VOLTAGE =
   3.50f;
 
 
-// ถ้าต่ำกว่านี้ต่อเนื่อง
-// จะเข้า Deep Sleep
+// Shutdown protection
 const float BATTERY_SHUTDOWN_VOLTAGE =
   3.45f;
 
 
-// ต้องเจอต่ำกว่าจุด Shutdown
-// 3 รอบติดกัน
+// Test threshold
+const float TEST_SHUTDOWN_VOLTAGE =
+  4.15f;
+
+
+// ต้องต่ำกว่า threshold
+// ต่อเนื่อง 3 ครั้ง
 const int LOW_BATTERY_CONFIRM_COUNT =
   3;
 
@@ -130,61 +182,24 @@ int lowBatteryConfirmCount =
 
 
 // ======================================================
-// LOW BATTERY TEST MODE
-// ======================================================
-//
-// false = ใช้งานจริง
-//
-// true = ทดสอบระบบ Protection
-//        โดยใช้ 4.15V เป็น shutdown threshold
-//
-// หลังทดสอบเสร็จต้องกลับเป็น false
-//
-// ======================================================
-
-const bool LOW_BATTERY_TEST_MODE =
-  false;
-
-
-const float TEST_SHUTDOWN_VOLTAGE =
-  4.15f;
-
-
-// ======================================================
-// BATTERY SAFETY STATE
-// ======================================================
-
-enum BatterySafetyState {
-  BATTERY_SAFE,
-  BATTERY_LOW,
-  BATTERY_CRITICAL
-};
-
-BatterySafetyState batterySafetyState =
-  BATTERY_SAFE;
-
-
-// ======================================================
-// RUNTIME TEST
+// RUNTIME DIAGNOSTICS
 // ======================================================
 
 bool runtimeActive =
   false;
 
 
-// เวลาที่ session ปัจจุบันเริ่ม
 unsigned long runtimeStartMs =
   0;
 
 
-// เวลาที่สะสมก่อน Pause
 unsigned long runtimeFrozenSeconds =
   0;
 
 
-// ค่าตอนเริ่ม Runtime Test
 int runtimeStartPercent =
   -1;
+
 
 int runtimeStartMilliVolts =
   0;
@@ -213,10 +228,34 @@ SemaphoreHandle_t commandMutex;
 SemaphoreHandle_t stateMutex;
 
 
-String pendingCommand = "";
+String pendingCommand =
+  "";
+
 
 bool newCommandReady =
   false;
+
+
+// ======================================================
+// DEBUG HELPERS
+// ======================================================
+
+void debugLine(
+  const String &text
+) {
+
+  if (
+    !DEBUG_MODE
+  ) {
+
+    return;
+  }
+
+
+  Serial.println(
+    text
+  );
+}
 
 
 // ======================================================
@@ -573,7 +612,6 @@ bool matchIconToken(
 
 
     p++;
-
     token++;
   }
 
@@ -593,10 +631,7 @@ int getIconTokenLength(
       p,
       ":heart:"
     )
-  ) {
-
-    return 7;
-  }
+  ) return 7;
 
 
   if (
@@ -604,10 +639,7 @@ int getIconTokenLength(
       p,
       ":star:"
     )
-  ) {
-
-    return 6;
-  }
+  ) return 6;
 
 
   if (
@@ -615,10 +647,7 @@ int getIconTokenLength(
       p,
       ":smile:"
     )
-  ) {
-
-    return 7;
-  }
+  ) return 7;
 
 
   if (
@@ -626,10 +655,7 @@ int getIconTokenLength(
       p,
       ":sun:"
     )
-  ) {
-
-    return 5;
-  }
+  ) return 5;
 
 
   if (
@@ -637,10 +663,7 @@ int getIconTokenLength(
       p,
       ":moon:"
     )
-  ) {
-
-    return 6;
-  }
+  ) return 6;
 
 
   if (
@@ -648,10 +671,7 @@ int getIconTokenLength(
       p,
       ":music:"
     )
-  ) {
-
-    return 7;
-  }
+  ) return 7;
 
 
   return 0;
@@ -770,7 +790,7 @@ void drawIconToken(
 
 
 // ======================================================
-// THAI COMBINING MARKS
+// THAI
 // ======================================================
 
 bool isThaiCombiningMark(
@@ -811,7 +831,7 @@ bool isThaiCombiningMark(
 
 
 // ======================================================
-// UTF-8 DECODER
+// UTF-8
 // ======================================================
 
 uint16_t nextUTF8(
@@ -887,8 +907,6 @@ uint16_t nextUTF8(
   }
 
 
-  // Unicode Emoji 4-byte
-  // ยังไม่ render ตรง ๆ
   if (
     (c & 0xF8)
     ==
@@ -905,9 +923,7 @@ uint16_t nextUTF8(
 }
 
 
-// ======================================================
-// CODEPOINT -> UTF-8
-// ======================================================
+// ------------------------------------------------------
 
 void codepointToUTF8(
   uint16_t codepoint,
@@ -926,7 +942,6 @@ void codepointToUTF8(
 
     buffer[0] =
       (char)codepoint;
-
 
     return;
   }
@@ -1198,7 +1213,7 @@ int drawRichText(
 
 
 // ======================================================
-// TEXT BASELINE
+// TEXT POSITION
 // ======================================================
 
 int getTextBaselineY() {
@@ -1224,7 +1239,8 @@ int getTextBaselineY() {
         -
         fontHeight
       )
-      / 2
+      /
+      2
     )
     +
     ascent;
@@ -1232,7 +1248,7 @@ int getTextBaselineY() {
 
 
 // ======================================================
-// BATTERY ADC
+// ADC
 // ======================================================
 
 float readPowerSenseVoltage() {
@@ -1269,7 +1285,7 @@ float readPowerSenseVoltage() {
     (float)samples;
 
 
-  float voltage =
+  return
     (
       averageMilliVolts
       *
@@ -1277,9 +1293,6 @@ float readPowerSenseVoltage() {
     )
     /
     1000.0f;
-
-
-  return voltage;
 }
 
 
@@ -1445,7 +1458,7 @@ int voltageToPercent(
 
 
 // ======================================================
-// POWER SOURCE STRING
+// POWER SOURCE
 // ======================================================
 
 const char *powerSourceCode(
@@ -1474,7 +1487,7 @@ const char *powerSourceCode(
 
 
 // ======================================================
-// BATTERY SAFETY
+// SAFETY STATE
 // ======================================================
 
 BatterySafetyState getBatterySafetyState(
@@ -1583,11 +1596,6 @@ void startNewRuntimeSessionUnsafe(
 
   runtimeStartMilliVolts =
     startMilliVolts;
-
-
-  Serial.println(
-    "Runtime session started"
-  );
 }
 
 
@@ -1609,21 +1617,6 @@ void stopRuntimeSessionUnsafe() {
 
   runtimeActive =
     false;
-
-
-  Serial.print(
-    "Runtime session paused at "
-  );
-
-
-  Serial.print(
-    runtimeFrozenSeconds
-  );
-
-
-  Serial.println(
-    " seconds"
-  );
 }
 
 
@@ -1689,7 +1682,7 @@ void resetRuntimeSession() {
   }
 
 
-  Serial.println(
+  debugLine(
     "Runtime test reset"
   );
 }
@@ -1763,65 +1756,39 @@ void showLowBatteryShutdownScreen() {
 
 void enterLowBatteryProtection() {
 
-  Serial.println();
+  if (
+    DEBUG_MODE
+  ) {
 
-  Serial.println(
-    "================================"
-  );
-
-
-  Serial.println(
-    "LOW BATTERY PROTECTION TRIGGERED"
-  );
-
-
-  Serial.print(
-    "Battery voltage: "
-  );
-
-
-  Serial.print(
-    batteryVoltage,
-    3
-  );
-
-
-  Serial.println(
-    " V"
-  );
-
-
-  Serial.println(
-    "Entering deep sleep..."
-  );
-
-
-  Serial.println(
-    "================================"
-  );
+    Serial.println(
+      "LOW BATTERY PROTECTION"
+    );
+  }
 
 
   showLowBatteryShutdownScreen();
 
 
-  // ปิด Backlight
   digitalWrite(
     TFT_BL,
     LOW
   );
 
 
-  // ปิดวงจรวัดแบต
   digitalWrite(
     BATTERY_ADC_EN,
     LOW
   );
 
 
-  Serial.flush();
+  if (
+    DEBUG_MODE
+  ) {
+
+    Serial.flush();
+  }
 
 
-  // รอให้ปล่อยปุ่มก่อน
   while (
     digitalRead(
       POWER_BUTTON
@@ -1841,7 +1808,6 @@ void enterLowBatteryProtection() {
   );
 
 
-  // ปุ่มเดิมยังใช้ Wake ได้
   esp_sleep_enable_ext0_wakeup(
     GPIO_NUM_35,
     0
@@ -1853,29 +1819,25 @@ void enterLowBatteryProtection() {
 
 
 // ======================================================
-// PROCESS BATTERY SAFETY
+// PROCESS BATTERY PROTECTION
 // ======================================================
 
-void processBatterySafety(
+void processBatteryProtection(
+  PowerSource source,
   float measuredVoltage
 ) {
 
-  batterySafetyState =
-    getBatterySafetyState(
-      measuredVoltage
-    );
+  if (
+    source !=
+    POWER_BATTERY
+  ) {
+
+    lowBatteryConfirmCount =
+      0;
 
 
-  Serial.print(
-    "Battery safety: "
-  );
-
-
-  Serial.println(
-    batterySafetyStateCode(
-      batterySafetyState
-    )
-  );
+    return;
+  }
 
 
   float shutdownVoltage =
@@ -1885,40 +1847,50 @@ void processBatterySafety(
 
 
   if (
-    LOW_BATTERY_TEST_MODE
-  ) {
-
-    Serial.print(
-      "TEST MODE shutdown threshold: "
-    );
-
-
-    Serial.print(
-      shutdownVoltage,
-      2
-    );
-
-
-    Serial.println(
-      " V"
-    );
-  }
-
-
-  // --------------------------------------------------
-  // BELOW SHUTDOWN THRESHOLD
-  // --------------------------------------------------
-
-  if (
     measuredVoltage <=
     shutdownVoltage
   ) {
 
     lowBatteryConfirmCount++;
 
+  } else {
+
+    lowBatteryConfirmCount =
+      0;
+  }
+
+
+  if (
+    DEBUG_MODE
+  ) {
 
     Serial.print(
-      "Low voltage confirmation: "
+      "Battery: "
+    );
+
+
+    Serial.print(
+      measuredVoltage,
+      3
+    );
+
+
+    Serial.print(
+      " V | Safety: "
+    );
+
+
+    Serial.print(
+      batterySafetyStateCode(
+        getBatterySafetyState(
+          measuredVoltage
+        )
+      )
+    );
+
+
+    Serial.print(
+      " | Protection: "
     );
 
 
@@ -1937,26 +1909,6 @@ void processBatterySafety(
     );
   }
 
-  else {
-
-    if (
-      lowBatteryConfirmCount > 0
-    ) {
-
-      Serial.println(
-        "Low voltage confirmation cleared"
-      );
-    }
-
-
-    lowBatteryConfirmCount =
-      0;
-  }
-
-
-  // --------------------------------------------------
-  // PROTECT
-  // --------------------------------------------------
 
   if (
     lowBatteryConfirmCount >=
@@ -1990,6 +1942,10 @@ void updatePowerReading() {
     -1;
 
 
+  BatterySafetyState newSafetyState =
+    BATTERY_SAFE;
+
+
   // ==================================================
   // BATTERY
   // ==================================================
@@ -2013,11 +1969,17 @@ void updatePowerReading() {
       voltageToPercent(
         measuredVoltage
       );
+
+
+    newSafetyState =
+      getBatterySafetyState(
+        measuredVoltage
+      );
   }
 
 
   // ==================================================
-  // USB / EXTERNAL
+  // USB
   // ==================================================
 
   else if (
@@ -2033,7 +1995,7 @@ void updatePowerReading() {
 
 
   // ==================================================
-  // STATE UPDATE
+  // UPDATE SHARED STATE
   // ==================================================
 
   if (
@@ -2048,10 +2010,6 @@ void updatePowerReading() {
     PowerSource oldSource =
       powerSource;
 
-
-    // ----------------------------------------------
-    // BATTERY SESSION START
-    // ----------------------------------------------
 
     if (
       newSource ==
@@ -2072,10 +2030,6 @@ void updatePowerReading() {
       );
     }
 
-
-    // ----------------------------------------------
-    // BATTERY SESSION STOP
-    // ----------------------------------------------
 
     if (
       newSource !=
@@ -2105,121 +2059,41 @@ void updatePowerReading() {
       newBatteryPercent;
 
 
+    batterySafetyState =
+      newSafetyState;
+
+
     xSemaphoreGive(
       stateMutex
     );
-  }
+
+  } else {
+
+    powerSenseVoltage =
+      measuredVoltage;
 
 
-  // ==================================================
-  // DEBUG
-  // ==================================================
-
-  Serial.print(
-    "Power sense: "
-  );
+    powerSource =
+      newSource;
 
 
-  Serial.print(
-    measuredVoltage,
-    3
-  );
+    batteryVoltage =
+      newBatteryVoltage;
 
 
-  Serial.print(
-    " V | Source: "
-  );
-
-
-  Serial.println(
-    powerSourceCode(
-      newSource
-    )
-  );
-
-
-  // ==================================================
-  // BATTERY SAFETY
-  // ==================================================
-
-  if (
-    newSource ==
-    POWER_BATTERY
-  ) {
-
-    Serial.print(
-      "Battery: "
-    );
-
-
-    Serial.print(
-      newBatteryVoltage,
-      3
-    );
-
-
-    Serial.print(
-      " V / "
-    );
-
-
-    Serial.print(
-      newBatteryPercent
-    );
-
-
-    Serial.println(
-      "%"
-    );
-
-
-    processBatterySafety(
-      newBatteryVoltage
-    );
-  }
-
-
-  // ==================================================
-  // USB
-  // ==================================================
-
-  else if (
-    newSource ==
-    POWER_EXTERNAL
-  ) {
-
-    lowBatteryConfirmCount =
-      0;
+    batteryPercent =
+      newBatteryPercent;
 
 
     batterySafetyState =
-      BATTERY_SAFE;
-
-
-    Serial.println(
-      "External power detected"
-    );
+      newSafetyState;
   }
 
 
-  // ==================================================
-  // UNKNOWN
-  // ==================================================
-
-  else {
-
-    lowBatteryConfirmCount =
-      0;
-
-
-    batterySafetyState =
-      BATTERY_SAFE;
-
-
-    Serial.println(
-      "Power reading invalid"
-    );
-  }
+  processBatteryProtection(
+    newSource,
+    newBatteryVoltage
+  );
 }
 
 
@@ -2249,14 +2123,19 @@ class CommandCallbacks :
     }
 
 
-    Serial.print(
-      "Received: "
-    );
+    if (
+      DEBUG_MODE
+    ) {
+
+      Serial.print(
+        "Received: "
+      );
 
 
-    Serial.println(
-      value
-    );
+      Serial.println(
+        value
+      );
+    }
 
 
     if (
@@ -2307,6 +2186,9 @@ class CommandCallbacks :
     int currentBatteryMilliVolts;
 
     int currentSenseMilliVolts;
+
+
+    BatterySafetyState currentSafety;
 
 
     bool currentRuntimeActive;
@@ -2362,6 +2244,10 @@ class CommandCallbacks :
           *
           1000.0f
         );
+
+
+      currentSafety =
+        batterySafetyState;
 
 
       currentRuntimeActive =
@@ -2422,6 +2308,10 @@ class CommandCallbacks :
         );
 
 
+      currentSafety =
+        batterySafetyState;
+
+
       currentRuntimeActive =
         runtimeActive;
 
@@ -2439,19 +2329,30 @@ class CommandCallbacks :
     }
 
 
+    String safetyCode =
+      currentPowerSource ==
+      POWER_BATTERY
+        ? batterySafetyStateCode(
+            currentSafety
+          )
+        : "NA";
+
+
     // ==================================================
-    // STATE FORMAT
+    // V2.12 STATE
     //
-    // scroll,
-    // display,
-    // source,
-    // percent,
-    // batteryMV,
-    // senseMV,
-    // runtimeActive,
-    // runtimeSeconds,
-    // runtimeStartPercent,
-    // runtimeStartMV
+    // 0 scroll
+    // 1 display
+    // 2 source
+    // 3 battery %
+    // 4 battery mV
+    // 5 sense mV
+    // 6 runtime active
+    // 7 runtime seconds
+    // 8 runtime start %
+    // 9 runtime start mV
+    // 10 safety
+    // 11 firmware
     //
     // ==================================================
 
@@ -2520,6 +2421,14 @@ class CommandCallbacks :
         currentRuntimeStartMilliVolts
       )
       +
+      ","
+      +
+      safetyCode
+      +
+      ","
+      +
+      FIRMWARE_VERSION
+      +
       "\n"
       +
       currentMessage;
@@ -2527,16 +2436,6 @@ class CommandCallbacks :
 
     pCharacteristic->setValue(
       state.c_str()
-    );
-
-
-    Serial.println(
-      "State requested:"
-    );
-
-
-    Serial.println(
-      state
     );
   }
 };
@@ -2553,7 +2452,7 @@ class ServerCallbacks :
     BLEServer *pServer
   ) override {
 
-    Serial.println(
+    debugLine(
       "BLE connected"
     );
   }
@@ -2563,7 +2462,7 @@ class ServerCallbacks :
     BLEServer *pServer
   ) override {
 
-    Serial.println(
+    debugLine(
       "BLE disconnected"
     );
 
@@ -2571,27 +2470,19 @@ class ServerCallbacks :
     pServer
       ->getAdvertising()
       ->start();
-
-
-    Serial.println(
-      "BLE advertising restarted"
-    );
   }
 };
 
 
 // ======================================================
-// NORMAL DEEP SLEEP
+// DEEP SLEEP
 // ======================================================
 
 void goToSleep() {
 
-  Serial.println(
-    "Going to deep sleep..."
+  debugLine(
+    "Entering deep sleep"
   );
-
-
-  Serial.flush();
 
 
   digitalWrite(
@@ -2604,6 +2495,14 @@ void goToSleep() {
     BATTERY_ADC_EN,
     LOW
   );
+
+
+  if (
+    DEBUG_MODE
+  ) {
+
+    Serial.flush();
+  }
 
 
   while (
@@ -2760,36 +2659,6 @@ void setMessage(
       /
       2;
   }
-
-
-  Serial.print(
-    "Message changed: "
-  );
-
-
-  Serial.println(
-    message
-  );
-
-
-  Serial.print(
-    "Rendered width: "
-  );
-
-
-  Serial.println(
-    textWidth
-  );
-
-
-  if (
-    forcedScroll
-  ) {
-
-    Serial.println(
-      "Scrolling forced ON: message is wider than screen"
-    );
-  }
 }
 
 
@@ -2837,18 +2706,6 @@ void setDisplay(
       ? HIGH
       : LOW
   );
-
-
-  Serial.print(
-    "Display: "
-  );
-
-
-  Serial.println(
-    enabled
-      ? "ON"
-      : "OFF"
-  );
 }
 
 
@@ -2859,10 +2716,6 @@ void setDisplay(
 void setScroll(
   bool enabled
 ) {
-
-  // --------------------------------------------------
-  // ON
-  // --------------------------------------------------
 
   if (
     enabled
@@ -2902,19 +2755,12 @@ void setScroll(
       sprite.width();
 
 
-    Serial.println(
-      "Scroll: ON"
-    );
-
-
     return;
   }
 
 
-  // --------------------------------------------------
-  // OFF REJECTED
-  // --------------------------------------------------
-
+  // ข้อความยาว
+  // ห้ามปิด Scroll
   if (
     textWidth >
     sprite.width()
@@ -2950,18 +2796,9 @@ void setScroll(
     );
 
 
-    Serial.println(
-      "Scroll OFF rejected: message is wider than screen"
-    );
-
-
     return;
   }
 
-
-  // --------------------------------------------------
-  // OFF
-  // --------------------------------------------------
 
   if (
     xSemaphoreTake(
@@ -3001,16 +2838,11 @@ void setScroll(
     )
     /
     2;
-
-
-  Serial.println(
-    "Scroll: OFF"
-  );
 }
 
 
 // ======================================================
-// COMMAND
+// COMMAND HANDLER
 // ======================================================
 
 void handleCommand(
@@ -3089,7 +2921,6 @@ void handleCommand(
       true
     );
 
-
     return;
   }
 
@@ -3103,7 +2934,6 @@ void handleCommand(
     setDisplay(
       false
     );
-
 
     return;
   }
@@ -3123,7 +2953,6 @@ void handleCommand(
       true
     );
 
-
     return;
   }
 
@@ -3138,13 +2967,12 @@ void handleCommand(
       false
     );
 
-
     return;
   }
 
 
   // ==================================================
-  // RUNTIME
+  // DIAGNOSTICS
   // ==================================================
 
   if (
@@ -3155,13 +2983,12 @@ void handleCommand(
 
     resetRuntimeSession();
 
-
     return;
   }
 
 
   // ==================================================
-  // FALLBACK MESSAGE
+  // FALLBACK
   // ==================================================
 
   setMessage(
@@ -3176,49 +3003,30 @@ void handleCommand(
 
 void setup() {
 
-  Serial.begin(
-    115200
-  );
-
-
-  delay(
-    200
-  );
-
-
-  Serial.println();
-
-  Serial.println(
-    "================================"
-  );
-
-
-  Serial.print(
-    "HairClip V"
-  );
-
-
-  Serial.println(
-    FIRMWARE_VERSION
-  );
-
-
-  Serial.println(
-    "Low Battery Protection"
-  );
-
-
-  Serial.println(
-    "================================"
-  );
-
-
   if (
-    LOW_BATTERY_TEST_MODE
+    DEBUG_MODE
   ) {
 
+    Serial.begin(
+      115200
+    );
+
+
+    delay(
+      200
+    );
+
+
+    Serial.println();
+
+
+    Serial.print(
+      "HairClip firmware "
+    );
+
+
     Serial.println(
-      "WARNING: LOW BATTERY TEST MODE IS ENABLED"
+      FIRMWARE_VERSION
     );
   }
 
@@ -3362,7 +3170,7 @@ void setup() {
 
 
   // ==================================================
-  // U8G2
+  // FONT
   // ==================================================
 
   u8f.begin(
@@ -3391,7 +3199,7 @@ void setup() {
 
 
   // ==================================================
-  // TEXT
+  // MESSAGE
   // ==================================================
 
   textWidth =
@@ -3439,7 +3247,7 @@ void setup() {
 
 
   // ==================================================
-  // INITIAL POWER READ
+  // POWER
   // ==================================================
 
   updatePowerReading();
@@ -3506,58 +3314,8 @@ void setup() {
   pAdvertising->start();
 
 
-  // ==================================================
-  // READY
-  // ==================================================
-
-  Serial.println();
-
-  Serial.print(
-    "HairClip V"
-  );
-
-
-  Serial.print(
-    FIRMWARE_VERSION
-  );
-
-
-  Serial.println(
-    " ready!"
-  );
-
-
-  Serial.print(
-    "Message: "
-  );
-
-
-  Serial.println(
-    message
-  );
-
-
-  Serial.print(
-    "Scroll: "
-  );
-
-
-  Serial.println(
-    scrollEnabled
-      ? "ON"
-      : "OFF"
-  );
-
-
-  Serial.print(
-    "Display: "
-  );
-
-
-  Serial.println(
-    displayEnabled
-      ? "ON"
-      : "OFF"
+  debugLine(
+    "HairClip ready"
   );
 }
 
@@ -3569,7 +3327,7 @@ void setup() {
 void loop() {
 
   // ==================================================
-  // POWER BUTTON
+  // PHYSICAL POWER BUTTON
   // ==================================================
 
   if (
@@ -3701,10 +3459,6 @@ void loop() {
       0
     );
 
-
-    // ================================================
-    // SCROLL
-    // ================================================
 
     if (
       scrollEnabled

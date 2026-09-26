@@ -124,56 +124,10 @@
         Waiting for HairClip
       </p>
 
-
-      <!-- RUNTIME -->
-
-      <div class="runtime-divider"></div>
-
-
-      <div class="runtime-header">
-
-        <span>
-          BATTERY RUNTIME
-        </span>
-
-        <span
-          id="runtimeState"
-          class="runtime-state"
-        >
-          Waiting
-        </span>
-
-      </div>
-
-
-      <div
-        id="runtimeElapsed"
-        class="runtime-time"
-      >
-        00:00:00
-      </div>
-
-
-      <p
-        id="runtimeStart"
-        class="runtime-start"
-      >
-        Connect HairClip to start
-      </p>
-
-
-      <button
-        id="runtimeResetButton"
-        class="runtime-reset-button"
-        disabled
-      >
-        Reset Runtime Test
-      </button>
-
     </section>
 
 
-    <!-- LOW BATTERY WARNING -->
+    <!-- BATTERY WARNING -->
 
     <div
       id="batteryWarning"
@@ -185,7 +139,7 @@
       </strong>
 
       <p id="batteryWarningText">
-        Consider charging your HairClip soon.
+        Please charge your HairClip.
       </p>
 
     </div>
@@ -234,12 +188,14 @@
             disabled
           >♥</button>
 
+
           <button
             type="button"
             class="icon-button"
             data-token=":star:"
             disabled
           >★</button>
+
 
           <button
             type="button"
@@ -248,6 +204,7 @@
             disabled
           >☺</button>
 
+
           <button
             type="button"
             class="icon-button"
@@ -255,12 +212,14 @@
             disabled
           >☀</button>
 
+
           <button
             type="button"
             class="icon-button"
             data-token=":moon:"
             disabled
           >☾</button>
+
 
           <button
             type="button"
@@ -302,6 +261,7 @@
           </p>
 
         </div>
+
 
         <label class="switch">
 
@@ -354,6 +314,134 @@
 
     </section>
 
+
+    <!-- DIAGNOSTICS -->
+
+    <details class="diagnostics">
+
+      <summary>
+        Diagnostics
+      </summary>
+
+
+      <div class="diagnostics-content">
+
+        <div class="diagnostic-row">
+
+          <span>
+            Firmware
+          </span>
+
+          <strong id="diagFirmware">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="diagnostic-row">
+
+          <span>
+            BLE
+          </span>
+
+          <strong id="diagBle">
+            Disconnected
+          </strong>
+
+        </div>
+
+
+        <div class="diagnostic-row">
+
+          <span>
+            Power Source
+          </span>
+
+          <strong id="diagPowerSource">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="diagnostic-row">
+
+          <span>
+            Battery Safety
+          </span>
+
+          <strong id="diagSafety">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="diagnostic-row">
+
+          <span>
+            Power Sense
+          </span>
+
+          <strong id="diagSense">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="diagnostic-divider"></div>
+
+
+        <span class="diagnostic-heading">
+          BATTERY RUNTIME
+        </span>
+
+
+        <div
+          id="runtimeElapsed"
+          class="runtime-time"
+        >
+          00:00:00
+        </div>
+
+
+        <div class="diagnostic-row">
+
+          <span>
+            Runtime State
+          </span>
+
+          <strong id="runtimeState">
+            Waiting
+          </strong>
+
+        </div>
+
+
+        <p
+          id="runtimeStart"
+          class="runtime-start"
+        >
+          Runtime baseline unavailable
+        </p>
+
+
+        <button
+          id="runtimeResetButton"
+          class="runtime-reset-button"
+          disabled
+        >
+          Reset Runtime Test
+        </button>
+
+      </div>
+
+    </details>
+
+
+    <!-- ACTIVITY -->
 
     <div class="activity">
 
