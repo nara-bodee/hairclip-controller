@@ -5,7 +5,6 @@
 const SERVICE_UUID =
   "c7a10001-6c9e-4d5d-a001-123456789abc";
 
-
 const CHARACTERISTIC_UUID =
   "c7a10002-6c9e-4d5d-a001-123456789abc";
 
@@ -15,11 +14,9 @@ const CHARACTERISTIC_UUID =
 // ======================================================
 
 let device = null;
-
 let characteristic = null;
 
 let isConnecting = false;
-
 let manualDisconnect = false;
 
 
@@ -32,48 +29,40 @@ const connectButton =
     "connectButton"
   );
 
-
 const sendButton =
   document.getElementById(
     "sendButton"
   );
-
 
 const messageInput =
   document.getElementById(
     "messageInput"
   );
 
-
 const scrollToggle =
   document.getElementById(
     "scrollToggle"
   );
-
 
 const displayToggle =
   document.getElementById(
     "displayToggle"
   );
 
-
 const statusText =
   document.getElementById(
     "statusText"
   );
-
 
 const statusBadge =
   document.getElementById(
     "statusBadge"
   );
 
-
 const characterCount =
   document.getElementById(
     "characterCount"
   );
-
 
 const log =
   document.getElementById(
@@ -82,11 +71,21 @@ const log =
 
 
 // ======================================================
-// CONNECTION HELPERS
+// HELPERS
 // ======================================================
 
-function isConnected() {
+function wait(ms) {
+  return new Promise(
+    resolve =>
+      setTimeout(
+        resolve,
+        ms
+      )
+  );
+}
 
+
+function isConnected() {
   return Boolean(
     device &&
     device.gatt &&
@@ -97,24 +96,20 @@ function isConnected() {
 
 
 // ======================================================
-// ENABLE / DISABLE CONTROLS
+// CONTROL STATE
 // ======================================================
 
 function setControlsEnabled(
   enabled
 ) {
-
   messageInput.disabled =
     !enabled;
-
 
   sendButton.disabled =
     !enabled;
 
-
   scrollToggle.disabled =
     !enabled;
-
 
   displayToggle.disabled =
     !enabled;
@@ -122,77 +117,60 @@ function setControlsEnabled(
 
 
 // ======================================================
-// CONNECTION STATUS UI
+// CONNECTION UI
 // ======================================================
 
 function setConnectionStatus(
   connected
 ) {
-
   if (connected) {
-
     statusText.textContent =
       "Connected";
-
 
     statusBadge.classList.remove(
       "disconnected"
     );
 
-
     statusBadge.classList.add(
       "connected"
     );
 
-
     connectButton.textContent =
       "Disconnect";
-
 
     setControlsEnabled(
       true
     );
 
-  } else {
-
-    statusText.textContent =
-      "Disconnected";
-
-
-    statusBadge.classList.remove(
-      "connected"
-    );
-
-
-    statusBadge.classList.add(
-      "disconnected"
-    );
-
-
-    // ถ้า browser ยังจำ device object ได้
-    // ครั้งต่อไป reconnect ได้โดยไม่เปิด chooser
-    connectButton.textContent =
-      device
-        ? "Reconnect HairClip"
-        : "Connect HairClip";
-
-
-    setControlsEnabled(
-      false
-    );
+    return;
   }
+
+
+  statusText.textContent =
+    "Disconnected";
+
+  statusBadge.classList.remove(
+    "connected"
+  );
+
+  statusBadge.classList.add(
+    "disconnected"
+  );
+
+  connectButton.textContent =
+    device
+      ? "Reconnect HairClip"
+      : "Connect HairClip";
+
+  setControlsEnabled(
+    false
+  );
 }
 
 
-// ======================================================
-// CLEAR ACTIVE CONNECTION
-// ======================================================
-
 function clearConnection() {
-
   characteristic =
     null;
-
 
   setConnectionStatus(
     false
@@ -201,49 +179,39 @@ function clearConnection() {
 
 
 // ======================================================
-// SYNC STATE FROM HAIRCLIP
+// SYNC STATE
 // ======================================================
 
 async function syncControllerState() {
-
   if (!characteristic) {
-
-    return false;
+    return null;
   }
 
-
   try {
-
     const value =
       await characteristic.readValue();
-
 
     const response =
       new TextDecoder().decode(
         value
       );
 
-
     console.log(
       "HairClip response:",
       response
     );
-
 
     // รูปแบบ:
     //
     // 1,1
     // HELLO WORLD
 
-
     const newlineIndex =
       response.indexOf("\n");
-
 
     if (
       newlineIndex === -1
     ) {
-
       throw new Error(
         "Invalid HairClip response"
       );
@@ -267,10 +235,6 @@ async function syncControllerState() {
         .trim();
 
 
-    // ==================================================
-    // STATE
-    // ==================================================
-
     const parts =
       state.split(",");
 
@@ -278,38 +242,43 @@ async function syncControllerState() {
     if (
       parts.length !== 2
     ) {
-
       throw new Error(
         "Invalid state response"
       );
     }
 
 
-    scrollToggle.checked =
+    const scrollEnabled =
       parts[0] === "1";
 
 
-    displayToggle.checked =
+    const displayEnabled =
       parts[1] === "1";
 
 
-    // ==================================================
-    // MESSAGE
-    // ==================================================
+    // Update UI
+    scrollToggle.checked =
+      scrollEnabled;
+
+    displayToggle.checked =
+      displayEnabled;
 
     messageInput.value =
       currentMessage;
-
 
     characterCount.textContent =
       `${currentMessage.length} / 100`;
 
 
-    return true;
+    return {
+      scrollEnabled,
+      displayEnabled,
+      message:
+        currentMessage
+    };
 
 
   } catch (error) {
-
     console.error(
       "State sync failed:",
       error
@@ -321,7 +290,6 @@ async function syncControllerState() {
       !device.gatt ||
       !device.gatt.connected
     ) {
-
       clearConnection();
 
       log.textContent =
@@ -329,19 +297,17 @@ async function syncControllerState() {
     }
 
 
-    return false;
+    return null;
   }
 }
 
 
 // ======================================================
-// CONNECT TO CURRENT DEVICE
+// CONNECT TO DEVICE
 // ======================================================
 
 async function connectToDevice() {
-
   if (!device) {
-
     throw new Error(
       "No Bluetooth device selected"
     );
@@ -349,23 +315,20 @@ async function connectToDevice() {
 
 
   log.textContent =
-    `Connecting to ${device.name || "HairClip"}...`;
+    `Connecting to ${
+      device.name || "HairClip"
+    }...`;
 
 
   let server;
 
 
-  // ถ้า GATT ยัง connected อยู่
-  // ไม่ต้อง connect ซ้ำ
   if (
     device.gatt.connected
   ) {
-
     server =
       device.gatt;
-
   } else {
-
     server =
       await device.gatt.connect();
   }
@@ -392,24 +355,19 @@ async function connectToDevice() {
     "Synchronizing state...";
 
 
-  const synced =
+  const state =
     await syncControllerState();
 
 
-  if (!synced) {
-
-    // ถ้า BLE ยังต่ออยู่
-    // แค่ State Sync มีปัญหา
+  if (!state) {
     if (
       device.gatt.connected
     ) {
-
       log.textContent =
         "Connected, but state sync failed";
 
       return;
     }
-
 
     throw new Error(
       "Connection lost during synchronization"
@@ -418,38 +376,33 @@ async function connectToDevice() {
 
 
   log.textContent =
-    `Connected to ${device.name || "HairClip"}`;
+    `Connected to ${
+      device.name || "HairClip"
+    }`;
 }
 
 
 // ======================================================
-// SELECT NEW DEVICE
+// SELECT DEVICE
 // ======================================================
 
 async function selectHairClip() {
-
   log.textContent =
     "Searching for HairClip...";
 
 
   const selectedDevice =
     await navigator.bluetooth.requestDevice({
-
       filters: [
-
         {
           name:
             "HairClip-V1"
         }
-
       ],
 
       optionalServices: [
-
         SERVICE_UUID
-
       ]
-
     });
 
 
@@ -458,11 +411,8 @@ async function selectHairClip() {
 
 
   device.addEventListener(
-
     "gattserverdisconnected",
-
     handleDisconnected
-
   );
 }
 
@@ -472,9 +422,7 @@ async function selectHairClip() {
 // ======================================================
 
 async function connectHairClip() {
-
   if (isConnecting) {
-
     return;
   }
 
@@ -482,7 +430,6 @@ async function connectHairClip() {
   if (
     !navigator.bluetooth
   ) {
-
     log.textContent =
       "Web Bluetooth is not supported in this browser";
 
@@ -493,39 +440,23 @@ async function connectHairClip() {
   isConnecting =
     true;
 
-
   connectButton.disabled =
     true;
-
 
   manualDisconnect =
     false;
 
 
   try {
-
-    // --------------------------------------------------
-    // ถ้ายังไม่เคยเลือก HairClip ใน session นี้
-    // เปิด Bluetooth chooser
-    // --------------------------------------------------
-
     if (!device) {
-
       await selectHairClip();
     }
 
-
-    // --------------------------------------------------
-    // ถ้ามี device อยู่แล้ว
-    // จะ reconnect ตัวเดิมทันที
-    // ไม่ต้องเลือกใหม่
-    // --------------------------------------------------
 
     await connectToDevice();
 
 
   } catch (error) {
-
     console.error(
       "Connection failed:",
       error
@@ -534,7 +465,6 @@ async function connectHairClip() {
 
     characteristic =
       null;
-
 
     setConnectionStatus(
       false
@@ -545,21 +475,17 @@ async function connectHairClip() {
       error.name ===
       "NotFoundError"
     ) {
-
       log.textContent =
         "Bluetooth selection cancelled";
-
     } else {
-
       log.textContent =
         `Connection failed: ${error.message}`;
     }
 
-  } finally {
 
+  } finally {
     isConnecting =
       false;
-
 
     connectButton.disabled =
       false;
@@ -572,7 +498,6 @@ async function connectHairClip() {
 // ======================================================
 
 function disconnectHairClip() {
-
   manualDisconnect =
     true;
 
@@ -582,13 +507,9 @@ function disconnectHairClip() {
     device.gatt &&
     device.gatt.connected
   ) {
-
     device.gatt.disconnect();
-
   } else {
-
     clearConnection();
-
 
     log.textContent =
       "HairClip disconnected";
@@ -597,14 +518,12 @@ function disconnectHairClip() {
 
 
 // ======================================================
-// GATT DISCONNECT EVENT
+// DISCONNECT EVENT
 // ======================================================
 
 function handleDisconnected() {
-
   characteristic =
     null;
-
 
   setConnectionStatus(
     false
@@ -612,12 +531,9 @@ function handleDisconnected() {
 
 
   if (manualDisconnect) {
-
     log.textContent =
       "HairClip disconnected";
-
   } else {
-
     log.textContent =
       "Connection lost — tap Reconnect HairClip";
   }
@@ -629,13 +545,12 @@ function handleDisconnected() {
 
 
 // ======================================================
-// HANDLE BLE FAILURE
+// BLE ERROR
 // ======================================================
 
 function handleBleFailure(
   error
 ) {
-
   console.error(
     "BLE error:",
     error
@@ -647,19 +562,15 @@ function handleBleFailure(
     !device.gatt ||
     !device.gatt.connected
   ) {
-
     characteristic =
       null;
-
 
     setConnectionStatus(
       false
     );
 
-
     log.textContent =
       "Connection lost — tap Reconnect HairClip";
-
 
     return;
   }
@@ -677,29 +588,19 @@ function handleBleFailure(
 async function sendCommand(
   command
 ) {
-
-  // --------------------------------------------------
-  // ตรวจ Connection ก่อนส่ง
-  // --------------------------------------------------
-
   if (!isConnected()) {
-
     clearConnection();
-
 
     log.textContent =
       "HairClip is not connected";
-
 
     return false;
   }
 
 
   try {
-
     const encoder =
       new TextEncoder();
-
 
     const data =
       encoder.encode(
@@ -712,22 +613,46 @@ async function sendCommand(
     );
 
 
-    log.textContent =
-      `Sent: ${command}`;
-
-
     return true;
 
 
   } catch (error) {
-
     handleBleFailure(
       error
     );
 
-
     return false;
   }
+}
+
+
+// ======================================================
+// SEND + WAIT + READ REAL STATE
+// ======================================================
+
+async function sendAndSync(
+  command
+) {
+  const success =
+    await sendCommand(
+      command
+    );
+
+
+  if (!success) {
+    return null;
+  }
+
+
+  // Firmware รับ command ใน BLE callback
+  // แล้ว main loop ค่อย execute
+  // จึงรอสั้น ๆ ก่อน Read state
+  await wait(
+    100
+  );
+
+
+  return await syncControllerState();
 }
 
 
@@ -736,42 +661,31 @@ async function sendCommand(
 // ======================================================
 
 connectButton.addEventListener(
-
   "click",
-
   async () => {
-
     if (
       device &&
       device.gatt &&
       device.gatt.connected
     ) {
-
       disconnectHairClip();
-
     } else {
-
       await connectHairClip();
     }
   }
-
 );
 
 
 // ======================================================
-// MESSAGE CHARACTER COUNT
+// CHARACTER COUNT
 // ======================================================
 
 messageInput.addEventListener(
-
   "input",
-
   () => {
-
     characterCount.textContent =
       `${messageInput.value.length} / 100`;
   }
-
 );
 
 
@@ -780,11 +694,8 @@ messageInput.addEventListener(
 // ======================================================
 
 sendButton.addEventListener(
-
   "click",
-
   async () => {
-
     const text =
       messageInput
         .value
@@ -792,7 +703,6 @@ sendButton.addEventListener(
 
 
     if (!text) {
-
       log.textContent =
         "Type a message first";
 
@@ -800,52 +710,43 @@ sendButton.addEventListener(
     }
 
 
-    // --------------------------------------------------
-    // UI: Sending
-    // --------------------------------------------------
-
     sendButton.disabled =
       true;
-
 
     sendButton.textContent =
       "Sending...";
 
 
-    // --------------------------------------------------
-    // BLE
-    // --------------------------------------------------
-
-    const success =
-      await sendCommand(
+    const state =
+      await sendAndSync(
         `TEXT:${text}`
       );
 
 
-    // --------------------------------------------------
-    // UI Result
-    // --------------------------------------------------
-
-    if (success) {
-
+    if (state) {
       sendButton.textContent =
         "Sent ✓";
 
-    } else {
 
+      if (
+        state.scrollEnabled
+      ) {
+        log.textContent =
+          "Message updated";
+      } else {
+        log.textContent =
+          "Message updated — scrolling is OFF";
+      }
+
+
+    } else {
       sendButton.textContent =
         "Send Message";
     }
 
 
-    // --------------------------------------------------
-    // Reset UI
-    // --------------------------------------------------
-
     setTimeout(
-
       () => {
-
         sendButton.textContent =
           "Send Message";
 
@@ -853,17 +754,14 @@ sendButton.addEventListener(
         if (
           isConnected()
         ) {
-
           sendButton.disabled =
             false;
         }
-
       },
 
       900
     );
   }
-
 );
 
 
@@ -872,27 +770,21 @@ sendButton.addEventListener(
 // ======================================================
 
 messageInput.addEventListener(
-
   "keydown",
-
   event => {
-
     if (
       event.key === "Enter"
     ) {
-
       event.preventDefault();
 
 
       if (
         !sendButton.disabled
       ) {
-
         sendButton.click();
       }
     }
   }
-
 );
 
 
@@ -901,47 +793,67 @@ messageInput.addEventListener(
 // ======================================================
 
 scrollToggle.addEventListener(
-
   "change",
-
   async () => {
-
-    const previousState =
-      !scrollToggle.checked;
-
-
-    const command =
-      scrollToggle.checked
-        ? "SCROLL:ON"
-        : "SCROLL:OFF";
+    const requestedState =
+      scrollToggle.checked;
 
 
     scrollToggle.disabled =
       true;
 
 
-    const success =
-      await sendCommand(
-        command
+    log.textContent =
+      requestedState
+        ? "Turning scrolling on..."
+        : "Turning scrolling off...";
+
+
+    const state =
+      await sendAndSync(
+        requestedState
+          ? "SCROLL:ON"
+          : "SCROLL:OFF"
       );
 
 
-    if (!success) {
+    if (state) {
+      // syncControllerState()
+      // ตั้ง Toggle ตามค่าจริงจาก ESP32 แล้ว
 
-      scrollToggle.checked =
-        previousState;
+
+      if (
+        !requestedState &&
+        state.scrollEnabled
+      ) {
+        // ผู้ใช้ขอ OFF
+        // แต่ ESP32 ยังคง ON
+        log.textContent =
+          "Message is too long — scrolling stays ON";
+      }
+
+      else if (
+        requestedState &&
+        state.scrollEnabled
+      ) {
+        log.textContent =
+          "Scrolling ON";
+      }
+
+      else {
+        log.textContent =
+          "Scrolling OFF";
+      }
     }
 
 
     if (
       isConnected()
     ) {
-
       scrollToggle.disabled =
         false;
     }
   }
-
 );
 
 
@@ -950,47 +862,39 @@ scrollToggle.addEventListener(
 // ======================================================
 
 displayToggle.addEventListener(
-
   "change",
-
   async () => {
-
-    const previousState =
-      !displayToggle.checked;
-
-
-    const command =
-      displayToggle.checked
-        ? "DISPLAY:ON"
-        : "DISPLAY:OFF";
+    const requestedState =
+      displayToggle.checked;
 
 
     displayToggle.disabled =
       true;
 
 
-    const success =
-      await sendCommand(
-        command
+    const state =
+      await sendAndSync(
+        requestedState
+          ? "DISPLAY:ON"
+          : "DISPLAY:OFF"
       );
 
 
-    if (!success) {
-
-      displayToggle.checked =
-        previousState;
+    if (state) {
+      log.textContent =
+        state.displayEnabled
+          ? "Display ON"
+          : "Display OFF";
     }
 
 
     if (
       isConnected()
     ) {
-
       displayToggle.disabled =
         false;
     }
   }
-
 );
 
 

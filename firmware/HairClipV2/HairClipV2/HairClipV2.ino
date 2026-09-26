@@ -11,6 +11,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
+#include <math.h>
 
 // ======================================================
 // HARDWARE
@@ -19,7 +20,6 @@
 #define TFT_BL 4
 #define POWER_BUTTON 35
 
-
 // ======================================================
 // DISPLAY
 // ======================================================
@@ -27,7 +27,6 @@
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite sprite = TFT_eSprite(&tft);
 
-// U8g2 จะวาดลง Sprite แทนวาดลงจอโดยตรง
 U8g2_for_TFT_eSPI u8f;
 
 String message = "HELLO WORLD!";
@@ -41,13 +40,18 @@ const int frameDelay = 25;
 bool displayEnabled = true;
 bool scrollEnabled = true;
 
+// ======================================================
+// ICON CONFIG
+// ======================================================
+
+const int ICON_WIDTH = 30;
+const int ICON_GAP = 4;
 
 // ======================================================
 // STORAGE
 // ======================================================
 
 Preferences preferences;
-
 
 // ======================================================
 // BLE
@@ -59,21 +63,237 @@ Preferences preferences;
 #define CHARACTERISTIC_UUID \
   "c7a10002-6c9e-4d5d-a001-123456789abc"
 
-
 SemaphoreHandle_t commandMutex;
 SemaphoreHandle_t stateMutex;
 
 String pendingCommand = "";
 bool newCommandReady = false;
 
+// ======================================================
+// ICONS
+// ======================================================
+
+void drawHeart(int cx, int cy, uint16_t color) {
+  sprite.fillCircle(cx - 6, cy - 4, 7, color);
+  sprite.fillCircle(cx + 6, cy - 4, 7, color);
+
+  sprite.fillTriangle(
+    cx - 13, cy - 2,
+    cx + 13, cy - 2,
+    cx, cy + 16,
+    color
+  );
+}
+
+void drawStar(int cx, int cy, uint16_t color) {
+  const int points = 10;
+
+  int px[points];
+  int py[points];
+
+  for (int i = 0; i < points; i++) {
+    float angle = -PI / 2 + i * PI / 5;
+    float radius = (i % 2 == 0) ? 15 : 7;
+
+    px[i] = cx + cos(angle) * radius;
+    py[i] = cy + sin(angle) * radius;
+  }
+
+  for (int i = 0; i < points; i++) {
+    int next = (i + 1) % points;
+
+    sprite.drawLine(
+      px[i],
+      py[i],
+      px[next],
+      py[next],
+      color
+    );
+  }
+}
+
+void drawSmile(int cx, int cy, uint16_t color) {
+  sprite.drawCircle(cx, cy, 15, color);
+
+  sprite.fillCircle(cx - 5, cy - 4, 2, color);
+  sprite.fillCircle(cx + 5, cy - 4, 2, color);
+
+  sprite.drawLine(cx - 7, cy + 4, cx - 3, cy + 8, color);
+  sprite.drawLine(cx - 3, cy + 8, cx + 3, cy + 8, color);
+  sprite.drawLine(cx + 3, cy + 8, cx + 7, cy + 4, color);
+}
+
+void drawSun(int cx, int cy, uint16_t color) {
+  sprite.drawCircle(cx, cy, 8, color);
+
+  for (int i = 0; i < 8; i++) {
+    float angle = i * PI / 4;
+
+    int x1 = cx + cos(angle) * 12;
+    int y1 = cy + sin(angle) * 12;
+
+    int x2 = cx + cos(angle) * 17;
+    int y2 = cy + sin(angle) * 17;
+
+    sprite.drawLine(
+      x1,
+      y1,
+      x2,
+      y2,
+      color
+    );
+  }
+}
+
+void drawMoon(int cx, int cy, uint16_t color) {
+  sprite.fillCircle(
+    cx,
+    cy,
+    15,
+    color
+  );
+
+  sprite.fillCircle(
+    cx + 7,
+    cy - 4,
+    14,
+    TFT_BLACK
+  );
+}
+
+void drawMusic(int cx, int cy, uint16_t color) {
+  sprite.fillCircle(
+    cx - 6,
+    cy + 10,
+    4,
+    color
+  );
+
+  sprite.fillCircle(
+    cx + 9,
+    cy + 6,
+    4,
+    color
+  );
+
+  sprite.drawLine(
+    cx - 2,
+    cy + 10,
+    cx - 2,
+    cy - 12,
+    color
+  );
+
+  sprite.drawLine(
+    cx + 13,
+    cy + 6,
+    cx + 13,
+    cy - 16,
+    color
+  );
+
+  sprite.drawLine(
+    cx - 2,
+    cy - 12,
+    cx + 13,
+    cy - 16,
+    color
+  );
+}
+
+// ======================================================
+// ICON TOKEN
+// ======================================================
+
+bool matchIconToken(
+  const char *p,
+  const char *token
+) {
+  while (*token) {
+    if (*p != *token) {
+      return false;
+    }
+
+    p++;
+    token++;
+  }
+
+  return true;
+}
+
+int getIconTokenLength(
+  const char *p
+) {
+  if (matchIconToken(p, ":heart:")) {
+    return 7;
+  }
+
+  if (matchIconToken(p, ":star:")) {
+    return 6;
+  }
+
+  if (matchIconToken(p, ":smile:")) {
+    return 7;
+  }
+
+  if (matchIconToken(p, ":sun:")) {
+    return 5;
+  }
+
+  if (matchIconToken(p, ":moon:")) {
+    return 6;
+  }
+
+  if (matchIconToken(p, ":music:")) {
+    return 7;
+  }
+
+  return 0;
+}
+
+void drawIconToken(
+  const char *p,
+  int cx,
+  int cy
+) {
+  if (matchIconToken(p, ":heart:")) {
+    drawHeart(cx, cy, TFT_WHITE);
+    return;
+  }
+
+  if (matchIconToken(p, ":star:")) {
+    drawStar(cx, cy, TFT_WHITE);
+    return;
+  }
+
+  if (matchIconToken(p, ":smile:")) {
+    drawSmile(cx, cy, TFT_WHITE);
+    return;
+  }
+
+  if (matchIconToken(p, ":sun:")) {
+    drawSun(cx, cy, TFT_WHITE);
+    return;
+  }
+
+  if (matchIconToken(p, ":moon:")) {
+    drawMoon(cx, cy, TFT_WHITE);
+    return;
+  }
+
+  if (matchIconToken(p, ":music:")) {
+    drawMusic(cx, cy, TFT_WHITE);
+    return;
+  }
+}
 
 // ======================================================
 // THAI SHAPING
 // ======================================================
 
-// เครื่องหมายภาษาไทยที่ต้องวาดซ้อนกับตัวอักษรก่อนหน้า
-bool isThaiCombiningMark(uint16_t codepoint) {
-
+bool isThaiCombiningMark(
+  uint16_t codepoint
+) {
   // ั
   if (codepoint == 0x0E31) {
     return true;
@@ -98,13 +318,13 @@ bool isThaiCombiningMark(uint16_t codepoint) {
   return false;
 }
 
-
 // ======================================================
 // UTF-8 DECODER
 // ======================================================
 
-uint16_t nextUTF8(const char *&p) {
-
+uint16_t nextUTF8(
+  const char *&p
+) {
   uint8_t c =
     (uint8_t)*p++;
 
@@ -113,83 +333,54 @@ uint16_t nextUTF8(const char *&p) {
     return c;
   }
 
-  // 2-byte UTF-8
-  if (
-    (c & 0xE0) == 0xC0
-  ) {
-
+  // 2-byte
+  if ((c & 0xE0) == 0xC0) {
     uint16_t result =
       (c & 0x1F) << 6;
 
     result |=
-      (
-        (uint8_t)*p++
-        & 0x3F
-      );
+      ((uint8_t)*p++ & 0x3F);
 
     return result;
   }
 
-  // 3-byte UTF-8
-  // ภาษาไทยอยู่ในกลุ่มนี้
-  if (
-    (c & 0xF0) == 0xE0
-  ) {
-
+  // 3-byte
+  if ((c & 0xF0) == 0xE0) {
     uint16_t result =
       (c & 0x0F) << 12;
 
     result |=
-      (
-        (
-          (uint8_t)*p++
-          & 0x3F
-        )
-        << 6
-      );
+      (((uint8_t)*p++ & 0x3F) << 6);
 
     result |=
-      (
-        (uint8_t)*p++
-        & 0x3F
-      );
+      ((uint8_t)*p++ & 0x3F);
 
     return result;
   }
 
-  // Emoji ส่วนใหญ่เป็น Unicode เกิน 16-bit
-  // รอบนี้ยังไม่รองรับ
-  if (
-    (c & 0xF8) == 0xF0
-  ) {
-
-    // ข้ามอีก 3 byte
+  // Emoji Unicode จริงยังไม่รองรับ
+  if ((c & 0xF8) == 0xF0) {
     p += 3;
-
     return '?';
   }
 
   return '?';
 }
 
-
 // ======================================================
-// CODEPOINT -> UTF-8
-// ใช้สำหรับวัดความกว้าง glyph
+// CODEPOINT -> UTF8
 // ======================================================
 
 void codepointToUTF8(
   uint16_t codepoint,
   char *buffer
 ) {
-
   buffer[0] = '\0';
   buffer[1] = '\0';
   buffer[2] = '\0';
   buffer[3] = '\0';
 
   if (codepoint < 0x80) {
-
     buffer[0] =
       (char)codepoint;
 
@@ -197,7 +388,6 @@ void codepointToUTF8(
   }
 
   if (codepoint < 0x800) {
-
     buffer[0] =
       0xC0 |
       (codepoint >> 6);
@@ -225,7 +415,6 @@ void codepointToUTF8(
     (codepoint & 0x3F);
 }
 
-
 // ======================================================
 // GLYPH WIDTH
 // ======================================================
@@ -233,7 +422,6 @@ void codepointToUTF8(
 int getGlyphAdvance(
   uint16_t codepoint
 ) {
-
   char utf8[4];
 
   codepointToUTF8(
@@ -246,33 +434,40 @@ int getGlyphAdvance(
   );
 }
 
-
 // ======================================================
-// MEASURE THAI / UTF-8 TEXT
+// MEASURE RICH TEXT
 // ======================================================
 
-int measureShapedText(
+int measureRichText(
   const String &text
 ) {
-
   const char *p =
     text.c_str();
 
   int width = 0;
 
   while (*p) {
+    int iconLength =
+      getIconTokenLength(p);
+
+    if (iconLength > 0) {
+      width +=
+        ICON_WIDTH +
+        ICON_GAP;
+
+      p += iconLength;
+
+      continue;
+    }
 
     uint16_t codepoint =
       nextUTF8(p);
 
-    // สระบน/ล่าง/วรรณยุกต์
-    // ไม่เพิ่มความกว้าง
     if (
       isThaiCombiningMark(
         codepoint
       )
     ) {
-
       continue;
     }
 
@@ -285,17 +480,15 @@ int measureShapedText(
   return width;
 }
 
-
 // ======================================================
-// DRAW THAI / UTF-8 TEXT
+// DRAW RICH TEXT
 // ======================================================
 
-int drawShapedText(
+int drawRichText(
   int startX,
   int baselineY,
   const String &text
 ) {
-
   int cursorX =
     startX;
 
@@ -305,25 +498,52 @@ int drawShapedText(
   const char *p =
     text.c_str();
 
-
   while (*p) {
+    // --------------------------------------------------
+    // ICON
+    // --------------------------------------------------
+
+    int iconLength =
+      getIconTokenLength(p);
+
+    if (iconLength > 0) {
+      int iconCenterX =
+        cursorX +
+        ICON_WIDTH / 2;
+
+      int iconCenterY =
+        baselineY - 8;
+
+      drawIconToken(
+        p,
+        iconCenterX,
+        iconCenterY
+      );
+
+      cursorX +=
+        ICON_WIDTH +
+        ICON_GAP;
+
+      baseX =
+        cursorX;
+
+      p += iconLength;
+
+      continue;
+    }
+
+    // --------------------------------------------------
+    // UTF8
+    // --------------------------------------------------
 
     uint16_t codepoint =
       nextUTF8(p);
-
-
-    // --------------------------------------------------
-    // Combining Mark
-    // --------------------------------------------------
 
     if (
       isThaiCombiningMark(
         codepoint
       )
     ) {
-
-      // วาดซ้อนกับตัวก่อนหน้า
-      // โดยไม่ขยับ Cursor
       u8f.drawGlyph(
         baseX,
         baselineY,
@@ -333,14 +553,8 @@ int drawShapedText(
       continue;
     }
 
-
-    // --------------------------------------------------
-    // Normal Character
-    // --------------------------------------------------
-
     baseX =
       cursorX;
-
 
     int advance =
       u8f.drawGlyph(
@@ -349,22 +563,20 @@ int drawShapedText(
         codepoint
       );
 
-
     cursorX +=
       advance;
   }
 
-
-  return cursorX - startX;
+  return
+    cursorX -
+    startX;
 }
 
-
 // ======================================================
-// CALCULATE VERTICAL CENTER
+// TEXT Y POSITION
 // ======================================================
 
 int getTextBaselineY() {
-
   int ascent =
     u8f.getFontAscent();
 
@@ -372,19 +584,19 @@ int getTextBaselineY() {
     u8f.getFontDescent();
 
   int fontHeight =
-    ascent - descent;
+    ascent -
+    descent;
 
   return
     (
       (
-        sprite.height()
-        - fontHeight
+        sprite.height() -
+        fontHeight
       )
       / 2
     )
     + ascent;
 }
-
 
 // ======================================================
 // BLE CALLBACK
@@ -396,7 +608,6 @@ class CommandCallbacks :
   void onWrite(
     BLECharacteristic *pCharacteristic
   ) override {
-
     String value =
       pCharacteristic->getValue();
 
@@ -408,7 +619,6 @@ class CommandCallbacks :
       return;
     }
 
-
     Serial.print(
       "Received: "
     );
@@ -417,14 +627,12 @@ class CommandCallbacks :
       value
     );
 
-
     if (
       xSemaphoreTake(
         commandMutex,
         pdMS_TO_TICKS(100)
       ) == pdTRUE
     ) {
-
       pendingCommand =
         value;
 
@@ -437,19 +645,13 @@ class CommandCallbacks :
     }
   }
 
-
-  // ----------------------------------------------------
-  // Controller อ่าน State
-  // ----------------------------------------------------
-
   void onRead(
     BLECharacteristic *pCharacteristic
   ) override {
-
     String currentMessage;
+
     bool currentScroll;
     bool currentDisplay;
-
 
     if (
       xSemaphoreTake(
@@ -457,7 +659,6 @@ class CommandCallbacks :
         pdMS_TO_TICKS(100)
       ) == pdTRUE
     ) {
-
       currentMessage =
         message;
 
@@ -470,9 +671,7 @@ class CommandCallbacks :
       xSemaphoreGive(
         stateMutex
       );
-
     } else {
-
       currentMessage =
         message;
 
@@ -482,7 +681,6 @@ class CommandCallbacks :
       currentDisplay =
         displayEnabled;
     }
-
 
     String state =
       String(
@@ -499,11 +697,9 @@ class CommandCallbacks :
       + "\n"
       + currentMessage;
 
-
     pCharacteristic->setValue(
       state.c_str()
     );
-
 
     Serial.println(
       "State requested:"
@@ -515,9 +711,8 @@ class CommandCallbacks :
   }
 };
 
-
 // ======================================================
-// BLE SERVER CALLBACK
+// BLE SERVER
 // ======================================================
 
 class ServerCallbacks :
@@ -526,26 +721,21 @@ class ServerCallbacks :
   void onConnect(
     BLEServer *pServer
   ) override {
-
     Serial.println(
       "BLE connected"
     );
   }
 
-
   void onDisconnect(
     BLEServer *pServer
   ) override {
-
     Serial.println(
       "BLE disconnected"
     );
 
-
     pServer
       ->getAdvertising()
       ->start();
-
 
     Serial.println(
       "BLE advertising restarted"
@@ -553,48 +743,39 @@ class ServerCallbacks :
   }
 };
 
-
 // ======================================================
 // DEEP SLEEP
 // ======================================================
 
 void goToSleep() {
-
   Serial.println(
     "Going to deep sleep..."
   );
 
   Serial.flush();
 
-
   digitalWrite(
     TFT_BL,
     LOW
   );
-
 
   while (
     digitalRead(
       POWER_BUTTON
     ) == LOW
   ) {
-
     delay(10);
   }
 
-
   delay(200);
-
 
   esp_sleep_enable_ext0_wakeup(
     GPIO_NUM_35,
     0
   );
 
-
   esp_deep_sleep_start();
 }
-
 
 // ======================================================
 // SET MESSAGE
@@ -603,13 +784,19 @@ void goToSleep() {
 void setMessage(
   const String &newMessage
 ) {
-
   if (
     newMessage.length() == 0
   ) {
     return;
   }
 
+  int newWidth =
+    measureRichText(
+      newMessage
+    );
+
+  bool forcedScroll =
+    false;
 
   if (
     xSemaphoreTake(
@@ -617,56 +804,98 @@ void setMessage(
       pdMS_TO_TICKS(100)
     ) == pdTRUE
   ) {
-
     message =
       newMessage;
+
+    textWidth =
+      newWidth;
+
+    // ถ้าปิด Scroll อยู่
+    // แต่ข้อความใหม่ยาวเกินจอ
+    // เปิด Scroll อัตโนมัติ
+    if (
+      !scrollEnabled &&
+      textWidth > sprite.width()
+    ) {
+      scrollEnabled =
+        true;
+
+      forcedScroll =
+        true;
+    }
 
     xSemaphoreGive(
       stateMutex
     );
-
   } else {
-
     message =
       newMessage;
+
+    textWidth =
+      newWidth;
+
+    if (
+      !scrollEnabled &&
+      textWidth > sprite.width()
+    ) {
+      scrollEnabled =
+        true;
+
+      forcedScroll =
+        true;
+    }
   }
 
-
-  // บันทึก UTF-8 ลง NVS
   preferences.putString(
     "message",
-    newMessage
+    message
   );
 
-
-  textWidth =
-    measureShapedText(
-      newMessage
+  if (forcedScroll) {
+    preferences.putBool(
+      "scroll",
+      true
     );
+  }
 
+  // ถ้าวิ่ง ให้เริ่มจากขวา
+  if (scrollEnabled) {
+    x =
+      sprite.width();
+  }
 
-  x =
-    sprite.width();
-
+  // ถ้าหยุด ให้จัดกลาง
+  else {
+    x =
+      (
+        sprite.width() -
+        textWidth
+      )
+      / 2;
+  }
 
   Serial.print(
     "Message changed: "
   );
 
   Serial.println(
-    newMessage
+    message
   );
 
-
   Serial.print(
-    "Text width: "
+    "Rendered width: "
   );
 
   Serial.println(
     textWidth
   );
-}
 
+  if (forcedScroll) {
+    Serial.println(
+      "Scrolling forced ON: message is wider than screen"
+    );
+  }
+}
 
 // ======================================================
 // SET DISPLAY
@@ -675,33 +904,27 @@ void setMessage(
 void setDisplay(
   bool enabled
 ) {
-
   if (
     xSemaphoreTake(
       stateMutex,
       pdMS_TO_TICKS(100)
     ) == pdTRUE
   ) {
-
     displayEnabled =
       enabled;
 
     xSemaphoreGive(
       stateMutex
     );
-
   } else {
-
     displayEnabled =
       enabled;
   }
-
 
   preferences.putBool(
     "display",
     enabled
   );
-
 
   digitalWrite(
     TFT_BL,
@@ -709,7 +932,6 @@ void setDisplay(
       ? HIGH
       : LOW
   );
-
 
   Serial.print(
     "Display: "
@@ -722,7 +944,6 @@ void setDisplay(
   );
 }
 
-
 // ======================================================
 // SET SCROLL
 // ======================================================
@@ -730,6 +951,85 @@ void setDisplay(
 void setScroll(
   bool enabled
 ) {
+  // --------------------------------------------------
+  // เปิด Scroll
+  // --------------------------------------------------
+
+  if (enabled) {
+    if (
+      xSemaphoreTake(
+        stateMutex,
+        pdMS_TO_TICKS(100)
+      ) == pdTRUE
+    ) {
+      scrollEnabled =
+        true;
+
+      xSemaphoreGive(
+        stateMutex
+      );
+    } else {
+      scrollEnabled =
+        true;
+    }
+
+    preferences.putBool(
+      "scroll",
+      true
+    );
+
+    x =
+      sprite.width();
+
+    Serial.println(
+      "Scroll: ON"
+    );
+
+    return;
+  }
+
+  // --------------------------------------------------
+  // ขอปิด Scroll
+  // แต่ข้อความยาวเกินจอ
+  // --------------------------------------------------
+
+  if (
+    textWidth >
+    sprite.width()
+  ) {
+    if (
+      xSemaphoreTake(
+        stateMutex,
+        pdMS_TO_TICKS(100)
+      ) == pdTRUE
+    ) {
+      scrollEnabled =
+        true;
+
+      xSemaphoreGive(
+        stateMutex
+      );
+    } else {
+      scrollEnabled =
+        true;
+    }
+
+    preferences.putBool(
+      "scroll",
+      true
+    );
+
+    Serial.println(
+      "Scroll OFF rejected: message is wider than screen"
+    );
+
+    return;
+  }
+
+  // --------------------------------------------------
+  // ข้อความพอดีจอ
+  // ปิด Scroll ได้
+  // --------------------------------------------------
 
   if (
     xSemaphoreTake(
@@ -737,54 +1037,33 @@ void setScroll(
       pdMS_TO_TICKS(100)
     ) == pdTRUE
   ) {
-
     scrollEnabled =
-      enabled;
+      false;
 
     xSemaphoreGive(
       stateMutex
     );
-
   } else {
-
     scrollEnabled =
-      enabled;
+      false;
   }
-
 
   preferences.putBool(
     "scroll",
-    enabled
+    false
   );
 
-
-  if (enabled) {
-
-    x =
-      sprite.width();
-
-  } else {
-
-    x =
-      (
-        sprite.width()
-        - textWidth
-      )
-      / 2;
-  }
-
-
-  Serial.print(
-    "Scroll: "
-  );
+  x =
+    (
+      sprite.width() -
+      textWidth
+    )
+    / 2;
 
   Serial.println(
-    enabled
-      ? "ON"
-      : "OFF"
+    "Scroll: OFF"
   );
 }
-
 
 // ======================================================
 // COMMAND HANDLER
@@ -793,9 +1072,7 @@ void setScroll(
 void handleCommand(
   String command
 ) {
-
   command.trim();
-
 
   if (
     command.length() == 0
@@ -803,17 +1080,13 @@ void handleCommand(
     return;
   }
 
-
-  // ----------------------------------------------------
+  // --------------------------------------------------
   // TEXT:
-  // เปลี่ยนเฉพาะ prefix เป็นตัวใหญ่
-  // ไม่แตะ UTF-8 ภาษาไทยที่อยู่ข้างหลัง
-  // ----------------------------------------------------
+  // --------------------------------------------------
 
   if (
     command.length() >= 5
   ) {
-
     String prefix =
       command.substring(
         0,
@@ -822,21 +1095,17 @@ void handleCommand(
 
     prefix.toUpperCase();
 
-
     if (
       prefix == "TEXT:"
     ) {
-
       String newMessage =
         command.substring(5);
 
       newMessage.trim();
 
-
       if (
         newMessage.length() > 0
       ) {
-
         setMessage(
           newMessage
         );
@@ -846,114 +1115,87 @@ void handleCommand(
     }
   }
 
-
-  // ----------------------------------------------------
+  // --------------------------------------------------
   // DISPLAY
-  // ----------------------------------------------------
+  // --------------------------------------------------
 
   if (
     command.equalsIgnoreCase(
       "DISPLAY:ON"
     )
   ) {
-
-    setDisplay(
-      true
-    );
-
+    setDisplay(true);
     return;
   }
-
 
   if (
     command.equalsIgnoreCase(
       "DISPLAY:OFF"
     )
   ) {
-
-    setDisplay(
-      false
-    );
-
+    setDisplay(false);
     return;
   }
 
-
-  // ----------------------------------------------------
+  // --------------------------------------------------
   // SCROLL
-  // ----------------------------------------------------
+  // --------------------------------------------------
 
   if (
     command.equalsIgnoreCase(
       "SCROLL:ON"
     )
   ) {
-
-    setScroll(
-      true
-    );
-
+    setScroll(true);
     return;
   }
-
 
   if (
     command.equalsIgnoreCase(
       "SCROLL:OFF"
     )
   ) {
-
-    setScroll(
-      false
-    );
-
+    setScroll(false);
     return;
   }
 
-
-  // ----------------------------------------------------
+  // --------------------------------------------------
   // FALLBACK
-  // ----------------------------------------------------
+  // --------------------------------------------------
 
-  // ส่งข้อความตรง ๆ ก็ยังใช้ได้
   setMessage(
     command
   );
 }
-
 
 // ======================================================
 // SETUP
 // ======================================================
 
 void setup() {
-
   Serial.begin(
     115200
   );
 
   delay(200);
 
-
-  // ====================================================
+  // --------------------------------------------------
   // BUTTON
-  // ====================================================
+  // --------------------------------------------------
 
   pinMode(
     POWER_BUTTON,
     INPUT
   );
 
-
-  // ====================================================
-  // STORAGE
-  // ====================================================
+  // --------------------------------------------------
+  // NVS
+  // --------------------------------------------------
 
   preferences.begin(
     "hairclip",
     false
   );
-
 
   message =
     preferences.getString(
@@ -961,13 +1203,11 @@ void setup() {
       "HELLO WORLD!"
     );
 
-
   displayEnabled =
     preferences.getBool(
       "display",
       true
     );
-
 
   scrollEnabled =
     preferences.getBool(
@@ -975,28 +1215,24 @@ void setup() {
       true
     );
 
-
-  // ====================================================
+  // --------------------------------------------------
   // MUTEX
-  // ====================================================
+  // --------------------------------------------------
 
   commandMutex =
     xSemaphoreCreateMutex();
 
-
   stateMutex =
     xSemaphoreCreateMutex();
 
-
-  // ====================================================
+  // --------------------------------------------------
   // DISPLAY
-  // ====================================================
+  // --------------------------------------------------
 
   pinMode(
     TFT_BL,
     OUTPUT
   );
-
 
   digitalWrite(
     TFT_BL,
@@ -1004,7 +1240,6 @@ void setup() {
       ? HIGH
       : LOW
   );
-
 
   tft.init();
 
@@ -1014,94 +1249,133 @@ void setup() {
     TFT_BLACK
   );
 
-
-  // 16-bit Sprite
   sprite.setColorDepth(
     16
   );
-
 
   sprite.createSprite(
     tft.width(),
     tft.height()
   );
 
-
   sprite.fillSprite(
     TFT_BLACK
   );
 
-
-  // ====================================================
-  // U8G2 -> SPRITE
-  // ====================================================
+  // --------------------------------------------------
+  // U8G2
+  // --------------------------------------------------
 
   u8f.begin(
     sprite
   );
 
-
-  // Transparent Font
-  // เพราะสระ/วรรณยุกต์ต้องวาดซ้อนกัน
   u8f.setFontMode(
     1
   );
-
 
   u8f.setFontDirection(
     0
   );
 
-
   u8f.setForegroundColor(
     TFT_WHITE
   );
 
-
-  // Font ไทย + ASCII
   u8f.setFont(
     u8g2_font_etl24thai_t
   );
 
-
-  // ====================================================
+  // --------------------------------------------------
   // TEXT WIDTH
-  // ====================================================
+  // --------------------------------------------------
 
   textWidth =
-    measureShapedText(
+    measureRichText(
       message
     );
 
-
+  // ถ้า NVS จำ Scroll OFF เอาไว้
+  // แต่ข้อความปัจจุบันยาวเกินจอ
+  // ต้องกลับมาเปิด Scroll
   if (
-    scrollEnabled
+    !scrollEnabled &&
+    textWidth >
+      sprite.width()
   ) {
+    scrollEnabled =
+      true;
 
+    preferences.putBool(
+      "scroll",
+      true
+    );
+
+    Serial.println(
+      "Scrolling restored to ON because saved message is too long"
+    );
+  }
+
+  if (scrollEnabled) {
     x =
       sprite.width();
-
   } else {
-
     x =
       (
-        sprite.width()
-        - textWidth
+        sprite.width() -
+        textWidth
       )
       / 2;
   }
 
+  // --------------------------------------------------
+  // BLE
+  // --------------------------------------------------
 
-  // ====================================================
-  // DEBUG
-  // ====================================================
-
-  Serial.println();
-
-  Serial.println(
-    "Loaded state:"
+  BLEDevice::init(
+    "HairClip-V1"
   );
 
+  BLEServer *pServer =
+    BLEDevice::createServer();
+
+  pServer->setCallbacks(
+    new ServerCallbacks()
+  );
+
+  BLEService *pService =
+    pServer->createService(
+      SERVICE_UUID
+    );
+
+  BLECharacteristic *pCharacteristic =
+    pService->createCharacteristic(
+      CHARACTERISTIC_UUID,
+
+      BLECharacteristic::PROPERTY_READ |
+      BLECharacteristic::PROPERTY_WRITE |
+      BLECharacteristic::PROPERTY_WRITE_NR
+    );
+
+  pCharacteristic->setCallbacks(
+    new CommandCallbacks()
+  );
+
+  pService->start();
+
+  BLEAdvertising *pAdvertising =
+    pServer->getAdvertising();
+
+  pAdvertising->addServiceUUID(
+    SERVICE_UUID
+  );
+
+  pAdvertising->start();
+
+  Serial.println();
+  Serial.println(
+    "HairClip ready!"
+  );
 
   Serial.print(
     "Message: "
@@ -1111,7 +1385,6 @@ void setup() {
     message
   );
 
-
   Serial.print(
     "Text width: "
   );
@@ -1119,7 +1392,6 @@ void setup() {
   Serial.println(
     textWidth
   );
-
 
   Serial.print(
     "Scroll: "
@@ -1131,7 +1403,6 @@ void setup() {
       : "OFF"
   );
 
-
   Serial.print(
     "Display: "
   );
@@ -1141,116 +1412,41 @@ void setup() {
       ? "ON"
       : "OFF"
   );
-
-
-  // ====================================================
-  // BLE
-  // ====================================================
-
-  BLEDevice::init(
-    "HairClip-V1"
-  );
-
-
-  BLEServer *pServer =
-    BLEDevice::createServer();
-
-
-  pServer->setCallbacks(
-    new ServerCallbacks()
-  );
-
-
-  BLEService *pService =
-    pServer->createService(
-      SERVICE_UUID
-    );
-
-
-  BLECharacteristic *pCharacteristic =
-    pService->createCharacteristic(
-
-      CHARACTERISTIC_UUID,
-
-      BLECharacteristic::PROPERTY_READ
-      |
-      BLECharacteristic::PROPERTY_WRITE
-      |
-      BLECharacteristic::PROPERTY_WRITE_NR
-    );
-
-
-  pCharacteristic->setCallbacks(
-    new CommandCallbacks()
-  );
-
-
-  pService->start();
-
-
-  BLEAdvertising *pAdvertising =
-    pServer->getAdvertising();
-
-
-  pAdvertising->addServiceUUID(
-    SERVICE_UUID
-  );
-
-
-  pAdvertising->start();
-
-
-  Serial.println();
-
-  Serial.println(
-    "HairClip V2.5 ready!"
-  );
-
-  Serial.println(
-    "Thai UTF-8 enabled"
-  );
 }
-
 
 // ======================================================
 // LOOP
 // ======================================================
 
 void loop() {
-
-  // ====================================================
+  // --------------------------------------------------
   // POWER BUTTON
-  // ====================================================
+  // --------------------------------------------------
 
   if (
     digitalRead(
       POWER_BUTTON
     ) == LOW
   ) {
-
     delay(50);
-
 
     if (
       digitalRead(
         POWER_BUTTON
       ) == LOW
     ) {
-
       goToSleep();
     }
   }
 
-
-  // ====================================================
+  // --------------------------------------------------
   // BLE COMMAND
-  // ====================================================
+  // --------------------------------------------------
 
   String command = "";
 
   bool executeCommand =
     false;
-
 
   if (
     xSemaphoreTake(
@@ -1258,94 +1454,75 @@ void loop() {
       0
     ) == pdTRUE
   ) {
-
     if (
       newCommandReady
     ) {
-
       command =
         pendingCommand;
-
 
       newCommandReady =
         false;
 
-
       executeCommand =
         true;
     }
-
 
     xSemaphoreGive(
       commandMutex
     );
   }
 
-
   if (
     executeCommand
   ) {
-
     handleCommand(
       command
     );
   }
 
-
-  // ====================================================
+  // --------------------------------------------------
   // DISPLAY
-  // ====================================================
+  // --------------------------------------------------
 
   if (
     displayEnabled
   ) {
-
-    // วาดเฟรมใหม่ใน RAM
     sprite.fillSprite(
       TFT_BLACK
     );
 
-
     int baselineY =
       getTextBaselineY();
 
-
-    drawShapedText(
+    drawRichText(
       x,
       baselineY,
       message
     );
 
-
-    // ส่งทั้งเฟรมขึ้น TFT ทีเดียว
     sprite.pushSprite(
       0,
       0
     );
 
-
-    // ==================================================
+    // ------------------------------------------------
     // SCROLL
-    // ==================================================
+    // ------------------------------------------------
 
     if (
       scrollEnabled
     ) {
-
       x -=
         scrollSpeed;
-
 
       if (
         x < -textWidth
       ) {
-
         x =
           sprite.width();
       }
     }
   }
-
 
   delay(
     frameDelay

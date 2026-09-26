@@ -1,16 +1,10 @@
-/* =====================================================
-   RESET
-===================================================== */
-
 * {
     box-sizing: border-box;
   }
   
-  
   :root {
     color-scheme: dark;
   }
-  
   
   body {
     margin: 0;
@@ -33,12 +27,10 @@
     color: white;
   }
   
-  
   button,
   input {
     font: inherit;
   }
-  
   
   button {
     border: 0;
@@ -74,7 +66,6 @@
     margin-bottom: 28px;
   }
   
-  
   .eyebrow {
     margin: 0;
   
@@ -85,7 +76,6 @@
   
     letter-spacing: 2px;
   }
-  
   
   h1 {
     margin:
@@ -115,10 +105,8 @@
     border-radius: 999px;
   
     font-size: 14px;
-  
     font-weight: 600;
   }
-  
   
   .status-dot {
     width: 9px;
@@ -126,9 +114,6 @@
   
     border-radius: 50%;
   }
-  
-  
-  /* Disconnected */
   
   .status-badge.disconnected {
     background:
@@ -142,14 +127,9 @@
     color: #ff6961;
   }
   
-  
-  .status-badge.disconnected
-  .status-dot {
+  .status-badge.disconnected .status-dot {
     background: #ff453a;
   }
-  
-  
-  /* Connected */
   
   .status-badge.connected {
     background:
@@ -163,9 +143,7 @@
     color: #4ade80;
   }
   
-  
-  .status-badge.connected
-  .status-dot {
+  .status-badge.connected .status-dot {
     background: #30d158;
   }
   
@@ -191,17 +169,10 @@
       opacity 0.15s;
   }
   
-  
-  /* Connect */
-  
   .connect-button {
     background: #0a84ff;
-  
     color: white;
   }
-  
-  
-  /* Send */
   
   .send-button {
     margin-top: 13px;
@@ -211,11 +182,9 @@
     color: #07160a;
   }
   
-  
   button:active:not(:disabled) {
     transform: scale(0.98);
   }
-  
   
   button:disabled {
     cursor: default;
@@ -225,7 +194,7 @@
   
   
   /* =====================================================
-     CARD
+     CARDS
   ===================================================== */
   
   .card {
@@ -271,18 +240,15 @@
     margin-bottom: 10px;
   }
   
-  
   .section-header label {
     font-weight: 700;
   }
-  
   
   #characterCount {
     color: #777;
   
     font-size: 12px;
   }
-  
   
   #messageInput {
     width: 100%;
@@ -309,24 +275,34 @@
     font-size: 16px;
   }
   
-  
   #messageInput::placeholder {
     color: #626268;
   }
-  
   
   #messageInput:focus {
     border-color: #0a84ff;
   }
   
-  
   #messageInput:disabled {
     opacity: 0.45;
   }
   
+  .message-hint {
+    margin:
+      11px
+      2px
+      0;
+  
+    color: #73737a;
+  
+    font-size: 12px;
+  
+    line-height: 1.5;
+  }
+  
   
   /* =====================================================
-     CONTROL ROW
+     CONTROLS
   ===================================================== */
   
   .control-row {
@@ -340,13 +316,11 @@
     gap: 20px;
   }
   
-  
   .control-row strong {
     display: block;
   
     margin-bottom: 4px;
   }
-  
   
   .control-row p {
     margin: 0;
@@ -354,12 +328,9 @@
     color: #7d8590;
   
     font-size: 13px;
+  
+    line-height: 1.4;
   }
-  
-  
-  /* =====================================================
-     DIVIDER
-  ===================================================== */
   
   .divider {
     height: 1px;
@@ -386,11 +357,9 @@
     height: 31px;
   }
   
-  
   .switch input {
     display: none;
   }
-  
   
   .slider {
     position: absolute;
@@ -405,7 +374,6 @@
   
     transition: 0.2s;
   }
-  
   
   .slider::before {
     content: "";
@@ -425,28 +393,16 @@
     transition: 0.2s;
   }
   
-  
-  .switch
-  input:checked
-  +
-  .slider {
+  .switch input:checked + .slider {
     background: #30d158;
   }
   
-  
-  .switch
-  input:checked
-  +
-  .slider::before {
+  .switch input:checked + .slider::before {
     transform:
       translateX(21px);
   }
   
-  
-  .switch
-  input:disabled
-  +
-  .slider {
+  .switch input:disabled + .slider {
     opacity: 0.35;
   
     cursor: default;
@@ -465,7 +421,6 @@
       4px;
   }
   
-  
   .activity span {
     display: block;
   
@@ -481,13 +436,14 @@
     letter-spacing: 1px;
   }
   
-  
   .activity p {
     margin: 0;
   
     color: #8e8e93;
   
     font-size: 13px;
+  
+    line-height: 1.5;
   
     word-break:
       break-word;
@@ -501,11 +457,9 @@
   @media (
     max-width: 480px
   ) {
-  
     .app {
       padding-top: 35px;
     }
-  
   
     h1 {
       font-size: 34px;
