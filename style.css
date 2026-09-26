@@ -36,10 +36,13 @@
   }
   
   
-  /* APP */
+  /* =====================================================
+     APP
+  ===================================================== */
   
   .app {
     width: min(440px, 100%);
+  
     margin: 0 auto;
   
     padding:
@@ -49,10 +52,13 @@
   }
   
   
-  /* HEADER */
+  /* =====================================================
+     HEADER
+  ===================================================== */
   
   header {
     text-align: center;
+  
     margin-bottom: 28px;
   }
   
@@ -77,10 +83,13 @@
   }
   
   
-  /* STATUS */
+  /* =====================================================
+     STATUS
+  ===================================================== */
   
   .status-badge {
     display: inline-flex;
+  
     align-items: center;
   
     gap: 8px;
@@ -104,12 +113,7 @@
   
   .status-badge.disconnected {
     background:
-      rgba(
-        255,
-        69,
-        58,
-        0.12
-      );
+      rgba(255, 69, 58, 0.12);
   
     color: #ff6961;
   }
@@ -120,12 +124,7 @@
   
   .status-badge.connected {
     background:
-      rgba(
-        48,
-        209,
-        88,
-        0.12
-      );
+      rgba(48, 209, 88, 0.12);
   
     color: #4ade80;
   }
@@ -135,7 +134,9 @@
   }
   
   
-  /* BUTTONS */
+  /* =====================================================
+     BUTTONS
+  ===================================================== */
   
   .connect-button,
   .send-button {
@@ -171,33 +172,28 @@
   
   button:disabled {
     cursor: default;
+  
     opacity: 0.35;
   }
   
   
-  /* BATTERY */
+  /* =====================================================
+     POWER CARD
+  ===================================================== */
   
   .battery-card {
     margin-top: 18px;
   
-    padding: 17px 19px;
+    padding:
+      17px
+      19px;
   
     background:
-      rgba(
-        28,
-        28,
-        30,
-        0.92
-      );
+      rgba(28, 28, 30, 0.92);
   
     border:
       1px solid
-      rgba(
-        255,
-        255,
-        255,
-        0.06
-      );
+      rgba(255, 255, 255, 0.06);
   
     border-radius: 18px;
   }
@@ -207,6 +203,8 @@
   
     align-items: flex-end;
     justify-content: space-between;
+  
+    gap: 15px;
   }
   
   .battery-label {
@@ -256,7 +254,9 @@
   
     border-radius: inherit;
   
-    transition: width 0.35s;
+    transition:
+      width 0.35s,
+      background 0.25s;
   }
   
   .battery-fill.medium {
@@ -267,19 +267,27 @@
     background: #ff453a;
   }
   
+  .battery-fill.external {
+    background: #0a84ff;
+  }
+  
   .battery-note {
     margin:
       8px
       0
       0;
   
-    color: #5f6368;
+    color: #6f7378;
   
     font-size: 11px;
+  
+    line-height: 1.4;
   }
   
   
-  /* CARDS */
+  /* =====================================================
+     CARDS
+  ===================================================== */
   
   .card {
     margin-top: 18px;
@@ -287,27 +295,19 @@
     padding: 19px;
   
     background:
-      rgba(
-        28,
-        28,
-        30,
-        0.92
-      );
+      rgba(28, 28, 30, 0.92);
   
     border:
       1px solid
-      rgba(
-        255,
-        255,
-        255,
-        0.06
-      );
+      rgba(255, 255, 255, 0.06);
   
     border-radius: 18px;
   }
   
   
-  /* MESSAGE */
+  /* =====================================================
+     MESSAGE
+  ===================================================== */
   
   .section-header {
     display: flex;
@@ -324,14 +324,18 @@
   
   #characterCount {
     color: #777;
+  
     font-size: 12px;
   }
   
   #messageInput {
     width: 100%;
+  
     min-height: 50px;
   
-    padding: 0 14px;
+    padding:
+      0
+      14px;
   
     border:
       1px solid
@@ -342,6 +346,7 @@
     outline: none;
   
     background: #111113;
+  
     color: white;
   
     font-size: 16px;
@@ -360,7 +365,9 @@
   }
   
   
-  /* ICON PICKER */
+  /* =====================================================
+     ICON PICKER
+  ===================================================== */
   
   .icon-section {
     margin-top: 15px;
@@ -398,6 +405,7 @@
     border-radius: 12px;
   
     background: #151517;
+  
     color: white;
   
     font-size: 24px;
@@ -418,7 +426,9 @@
   }
   
   
-  /* CONTROLS */
+  /* =====================================================
+     CONTROLS
+  ===================================================== */
   
   .control-row {
     display: flex;
@@ -431,6 +441,7 @@
   
   .control-row strong {
     display: block;
+  
     margin-bottom: 4px;
   }
   
@@ -440,6 +451,7 @@
     color: #7d8590;
   
     font-size: 13px;
+  
     line-height: 1.4;
   }
   
@@ -454,7 +466,9 @@
   }
   
   
-  /* SWITCH */
+  /* =====================================================
+     SWITCH
+  ===================================================== */
   
   .switch {
     position: relative;
@@ -515,7 +529,9 @@
   }
   
   
-  /* ACTIVITY */
+  /* =====================================================
+     ACTIVITY
+  ===================================================== */
   
   .activity {
     margin-top: 20px;
@@ -535,6 +551,7 @@
     font-size: 11px;
   
     text-transform: uppercase;
+  
     letter-spacing: 1px;
   }
   
@@ -544,17 +561,19 @@
     color: #8e8e93;
   
     font-size: 13px;
+  
     line-height: 1.5;
   
     word-break: break-word;
   }
   
   
-  /* MOBILE */
+  /* =====================================================
+     MOBILE
+  ===================================================== */
   
-  @media (
-    max-width: 480px
-  ) {
+  @media (max-width: 480px) {
+  
     .app {
       padding-top: 35px;
     }

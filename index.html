@@ -27,6 +27,7 @@
   <main class="app">
 
     <header>
+
       <p class="eyebrow">
         BLE CONTROLLER
       </p>
@@ -39,12 +40,15 @@
         id="statusBadge"
         class="status-badge disconnected"
       >
+
         <span class="status-dot"></span>
 
         <span id="statusText">
           Disconnected
         </span>
+
       </div>
+
     </header>
 
 
@@ -56,20 +60,22 @@
     </button>
 
 
-    <!-- BATTERY -->
+    <!-- BATTERY / POWER -->
 
     <section class="battery-card">
 
       <div class="battery-top">
 
         <div>
+
           <span class="battery-label">
-            BATTERY
+            POWER
           </span>
 
           <strong id="batteryPercent">
             --%
           </strong>
+
         </div>
 
         <span id="batteryVoltage">
@@ -89,8 +95,11 @@
       </div>
 
 
-      <p class="battery-note">
-        Estimated from LiPo voltage
+      <p
+        id="batteryNote"
+        class="battery-note"
+      >
+        Waiting for HairClip
       </p>
 
     </section>
@@ -129,9 +138,8 @@
           Icons
         </span>
 
-        <div
-          class="icon-picker"
-        >
+
+        <div class="icon-picker">
 
           <button
             type="button"
@@ -210,6 +218,7 @@
       <div class="control-row">
 
         <div>
+
           <strong>
             Scrolling
           </strong>
@@ -217,7 +226,9 @@
           <p>
             Long messages scroll automatically
           </p>
+
         </div>
+
 
         <label class="switch">
 
@@ -241,6 +252,7 @@
       <div class="control-row">
 
         <div>
+
           <strong>
             Display
           </strong>
@@ -248,7 +260,9 @@
           <p>
             Turn the screen on or off
           </p>
+
         </div>
+
 
         <label class="switch">
 
