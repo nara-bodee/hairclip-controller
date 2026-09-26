@@ -74,13 +74,27 @@ const iconButtons =
     ".icon-button"
   );
 
+const batteryPercentElement =
+  document.getElementById(
+    "batteryPercent"
+  );
+
+const batteryVoltageElement =
+  document.getElementById(
+    "batteryVoltage"
+  );
+
+const batteryFill =
+  document.getElementById(
+    "batteryFill"
+  );
+
 
 // ======================================================
 // HELPERS
 // ======================================================
 
 function wait(ms) {
-
   return new Promise(
     resolve =>
       setTimeout(
@@ -90,9 +104,7 @@ function wait(ms) {
   );
 }
 
-
 function isConnected() {
-
   return Boolean(
     device &&
     device.gatt &&
@@ -101,22 +113,98 @@ function isConnected() {
   );
 }
 
-
 function updateCharacterCount() {
-
   characterCount.textContent =
     `${messageInput.value.length} / 100`;
 }
 
 
 // ======================================================
-// ENABLE / DISABLE CONTROLS
+// BATTERY UI
+// ======================================================
+
+function updateBatteryUI(
+  percent,
+  milliVolts
+) {
+  batteryFill.classList.remove(
+    "medium",
+    "low"
+  );
+
+  if (
+    percent === null ||
+    percent < 0 ||
+    !Number.isFinite(percent)
+  ) {
+    batteryPercentElement.textContent =
+      "--%";
+
+    batteryVoltageElement.textContent =
+      "--.-- V";
+
+    batteryFill.style.width =
+      "0%";
+
+    return;
+  }
+
+  const safePercent =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        percent
+      )
+    );
+
+  batteryPercentElement.textContent =
+    `${safePercent}%`;
+
+  batteryFill.style.width =
+    `${safePercent}%`;
+
+  if (
+    Number.isFinite(
+      milliVolts
+    ) &&
+    milliVolts > 0
+  ) {
+    batteryVoltageElement.textContent =
+      `${(
+        milliVolts /
+        1000
+      ).toFixed(2)} V`;
+  } else {
+    batteryVoltageElement.textContent =
+      "--.-- V";
+  }
+
+  if (
+    safePercent <= 20
+  ) {
+    batteryFill.classList.add(
+      "low"
+    );
+  }
+
+  else if (
+    safePercent <= 50
+  ) {
+    batteryFill.classList.add(
+      "medium"
+    );
+  }
+}
+
+
+// ======================================================
+// CONTROL STATE
 // ======================================================
 
 function setControlsEnabled(
   enabled
 ) {
-
   messageInput.disabled =
     !enabled;
 
@@ -129,10 +217,8 @@ function setControlsEnabled(
   displayToggle.disabled =
     !enabled;
 
-
   iconButtons.forEach(
     button => {
-
       button.disabled =
         !enabled;
     }
@@ -147,9 +233,9 @@ function setControlsEnabled(
 function setConnectionStatus(
   connected
 ) {
-
-  if (connected) {
-
+  if (
+    connected
+  ) {
     statusText.textContent =
       "Connected";
 
@@ -171,7 +257,6 @@ function setConnectionStatus(
     return;
   }
 
-
   statusText.textContent =
     "Disconnected";
 
@@ -191,11 +276,14 @@ function setConnectionStatus(
   setControlsEnabled(
     false
   );
+
+  updateBatteryUI(
+    null,
+    null
+  );
 }
 
-
 function clearConnection() {
-
   characteristic =
     null;
 
@@ -210,46 +298,44 @@ function clearConnection() {
 // ======================================================
 
 async function syncControllerState() {
-
-  if (!characteristic) {
+  if (
+    !characteristic
+  ) {
     return null;
   }
 
-
   try {
-
     const value =
       await characteristic.readValue();
-
 
     const response =
       new TextDecoder().decode(
         value
       );
 
+    console.log(
+      "HairClip response:",
+      response
+    );
 
     const newlineIndex =
       response.indexOf("\n");
 
-
     if (
       newlineIndex === -1
     ) {
-
       throw new Error(
         "Invalid HairClip response"
       );
     }
 
-
-    const state =
+    const stateLine =
       response
         .slice(
           0,
           newlineIndex
         )
         .trim();
-
 
     const currentMessage =
       response
@@ -258,72 +344,99 @@ async function syncControllerState() {
         )
         .trim();
 
-
     const parts =
-      state.split(",");
-
+      stateLine.split(",");
 
     if (
-      parts.length !== 2
+      parts.length < 2
     ) {
-
       throw new Error(
         "Invalid state response"
       );
     }
 
-
     const scrollEnabled =
       parts[0] === "1";
-
 
     const displayEnabled =
       parts[1] === "1";
 
 
+    // ==================================================
+    // BATTERY
+    // ==================================================
+    //
+    // V2.8:
+    // scroll,display,percent,mV
+    //
+    // Older firmware with only 2 values
+    // still remains readable.
+    // ==================================================
+
+    let batteryPercent =
+      null;
+
+    let batteryMilliVolts =
+      null;
+
+    if (
+      parts.length >= 4
+    ) {
+      batteryPercent =
+        Number(
+          parts[2]
+        );
+
+      batteryMilliVolts =
+        Number(
+          parts[3]
+        );
+    }
+
+
     scrollToggle.checked =
       scrollEnabled;
-
 
     displayToggle.checked =
       displayEnabled;
 
-
     messageInput.value =
       currentMessage;
 
-
     updateCharacterCount();
+
+    updateBatteryUI(
+      batteryPercent,
+      batteryMilliVolts
+    );
 
 
     return {
       scrollEnabled,
       displayEnabled,
+      batteryPercent,
+      batteryMilliVolts,
       message:
         currentMessage
     };
 
 
   } catch (error) {
-
     console.error(
       "State sync failed:",
       error
     );
-
 
     if (
       !device ||
       !device.gatt ||
       !device.gatt.connected
     ) {
-
       clearConnection();
 
       log.textContent =
         "Connection lost";
     }
-
 
     return null;
   }
@@ -331,89 +444,77 @@ async function syncControllerState() {
 
 
 // ======================================================
-// CONNECT TO DEVICE
+// CONNECT
 // ======================================================
 
 async function connectToDevice() {
-
-  if (!device) {
-
+  if (
+    !device
+  ) {
     throw new Error(
       "No Bluetooth device selected"
     );
   }
 
-
   log.textContent =
     `Connecting to ${
-      device.name || "HairClip"
+      device.name ||
+      "HairClip"
     }...`;
 
-
   let server;
-
 
   if (
     device.gatt.connected
   ) {
-
     server =
       device.gatt;
-
   } else {
-
     server =
       await device.gatt.connect();
   }
-
 
   const service =
     await server.getPrimaryService(
       SERVICE_UUID
     );
 
-
   characteristic =
     await service.getCharacteristic(
       CHARACTERISTIC_UUID
     );
 
-
   setConnectionStatus(
     true
   );
 
-
   log.textContent =
     "Synchronizing state...";
-
 
   const state =
     await syncControllerState();
 
-
-  if (!state) {
-
+  if (
+    !state
+  ) {
     if (
       device.gatt.connected
     ) {
-
       log.textContent =
         "Connected, but state sync failed";
 
       return;
     }
 
-
     throw new Error(
       "Connection lost during synchronization"
     );
   }
 
-
   log.textContent =
     `Connected to ${
-      device.name || "HairClip"
+      device.name ||
+      "HairClip"
     }`;
 }
 
@@ -423,14 +524,11 @@ async function connectToDevice() {
 // ======================================================
 
 async function selectHairClip() {
-
   log.textContent =
     "Searching for HairClip...";
 
-
   const selectedDevice =
     await navigator.bluetooth.requestDevice({
-
       filters: [
         {
           name:
@@ -443,10 +541,8 @@ async function selectHairClip() {
       ]
     });
 
-
   device =
     selectedDevice;
-
 
   device.addEventListener(
     "gattserverdisconnected",
@@ -460,83 +556,66 @@ async function selectHairClip() {
 // ======================================================
 
 async function connectHairClip() {
-
-  if (isConnecting) {
+  if (
+    isConnecting
+  ) {
     return;
   }
-
 
   if (
     !navigator.bluetooth
   ) {
-
     log.textContent =
       "Web Bluetooth is not supported in this browser";
 
     return;
   }
 
-
   isConnecting =
     true;
-
 
   connectButton.disabled =
     true;
 
-
   manualDisconnect =
     false;
 
-
   try {
-
-    if (!device) {
-
+    if (
+      !device
+    ) {
       await selectHairClip();
     }
 
-
     await connectToDevice();
 
-
   } catch (error) {
-
     console.error(
       "Connection failed:",
       error
     );
 
-
     characteristic =
       null;
-
 
     setConnectionStatus(
       false
     );
 
-
     if (
       error.name ===
       "NotFoundError"
     ) {
-
       log.textContent =
         "Bluetooth selection cancelled";
-
     } else {
-
       log.textContent =
         `Connection failed: ${error.message}`;
     }
 
-
   } finally {
-
     isConnecting =
       false;
-
 
     connectButton.disabled =
       false;
@@ -549,21 +628,16 @@ async function connectHairClip() {
 // ======================================================
 
 function disconnectHairClip() {
-
   manualDisconnect =
     true;
-
 
   if (
     device &&
     device.gatt &&
     device.gatt.connected
   ) {
-
     device.gatt.disconnect();
-
   } else {
-
     clearConnection();
 
     log.textContent =
@@ -577,27 +651,22 @@ function disconnectHairClip() {
 // ======================================================
 
 function handleDisconnected() {
-
   characteristic =
     null;
-
 
   setConnectionStatus(
     false
   );
 
-
-  if (manualDisconnect) {
-
+  if (
+    manualDisconnect
+  ) {
     log.textContent =
       "HairClip disconnected";
-
   } else {
-
     log.textContent =
       "Connection lost — tap Reconnect HairClip";
   }
-
 
   manualDisconnect =
     false;
@@ -611,35 +680,28 @@ function handleDisconnected() {
 function handleBleFailure(
   error
 ) {
-
   console.error(
     "BLE error:",
     error
   );
-
 
   if (
     !device ||
     !device.gatt ||
     !device.gatt.connected
   ) {
-
     characteristic =
       null;
-
 
     setConnectionStatus(
       false
     );
 
-
     log.textContent =
       "Connection lost — tap Reconnect HairClip";
 
-
     return;
   }
-
 
   log.textContent =
     `BLE error: ${error.message}`;
@@ -647,31 +709,26 @@ function handleBleFailure(
 
 
 // ======================================================
-// SEND COMMAND
+// SEND
 // ======================================================
 
 async function sendCommand(
   command
 ) {
-
-  if (!isConnected()) {
-
+  if (
+    !isConnected()
+  ) {
     clearConnection();
-
 
     log.textContent =
       "HairClip is not connected";
 
-
     return false;
   }
 
-
   try {
-
     const encoder =
       new TextEncoder();
-
 
     await characteristic.writeValue(
       encoder.encode(
@@ -679,46 +736,34 @@ async function sendCommand(
       )
     );
 
-
     return true;
 
-
   } catch (error) {
-
     handleBleFailure(
       error
     );
-
 
     return false;
   }
 }
 
-
-// ======================================================
-// SEND + SYNC
-// ======================================================
-
 async function sendAndSync(
   command
 ) {
-
   const success =
     await sendCommand(
       command
     );
 
-
-  if (!success) {
-
+  if (
+    !success
+  ) {
     return null;
   }
-
 
   await wait(
     100
   );
-
 
   return await syncControllerState();
 }
@@ -731,134 +776,102 @@ async function sendAndSync(
 function insertIconToken(
   token
 ) {
-
   if (
     messageInput.disabled
   ) {
-
     return;
   }
-
 
   const currentValue =
     messageInput.value;
 
-
   const start =
-    messageInput.selectionStart
-      ?? currentValue.length;
-
+    messageInput.selectionStart ??
+    currentValue.length;
 
   const end =
-    messageInput.selectionEnd
-      ?? currentValue.length;
+    messageInput.selectionEnd ??
+    currentValue.length;
 
-
-  // ใส่ช่องว่างรอบ token
-  // เพื่อให้อ่านง่ายและไม่ติดคำอื่น
   const before =
     currentValue.slice(
       0,
       start
     );
 
-
   const after =
     currentValue.slice(
       end
     );
 
-
   const needsSpaceBefore =
     before.length > 0 &&
     !before.endsWith(" ");
-
 
   const needsSpaceAfter =
     after.length > 0 &&
     !after.startsWith(" ");
 
-
   let inserted =
     token;
 
-
-  if (needsSpaceBefore) {
-
+  if (
+    needsSpaceBefore
+  ) {
     inserted =
-      " " + inserted;
+      " " +
+      inserted;
   }
 
-
-  if (needsSpaceAfter) {
-
+  if (
+    needsSpaceAfter
+  ) {
     inserted =
-      inserted + " ";
+      inserted +
+      " ";
   }
-
 
   const newValue =
     before +
     inserted +
     after;
 
-
-  // HTML maxlength = 100
   if (
     newValue.length > 100
   ) {
-
     log.textContent =
       "Message limit reached";
 
     return;
   }
 
-
   messageInput.value =
     newValue;
 
-
   updateCharacterCount();
 
-
-  // ย้าย cursor ไปหลัง token
   const newCursorPosition =
     before.length +
     inserted.length;
 
-
   messageInput.focus();
-
 
   messageInput.setSelectionRange(
     newCursorPosition,
     newCursorPosition
   );
 
-
   log.textContent =
     `Added ${token}`;
 }
 
-
-// ======================================================
-// ICON BUTTONS
-// ======================================================
-
 iconButtons.forEach(
   button => {
-
     button.addEventListener(
       "click",
       () => {
-
-        const token =
-          button.dataset.token;
-
-
         insertIconToken(
-          token
+          button.dataset.token
         );
       }
     );
@@ -873,17 +886,13 @@ iconButtons.forEach(
 connectButton.addEventListener(
   "click",
   async () => {
-
     if (
       device &&
       device.gatt &&
       device.gatt.connected
     ) {
-
       disconnectHairClip();
-
     } else {
-
       await connectHairClip();
     }
   }
@@ -891,7 +900,7 @@ connectButton.addEventListener(
 
 
 // ======================================================
-// CHARACTER COUNT
+// INPUT
 // ======================================================
 
 messageInput.addEventListener(
@@ -907,79 +916,59 @@ messageInput.addEventListener(
 sendButton.addEventListener(
   "click",
   async () => {
-
     const text =
       messageInput
         .value
         .trim();
 
-
-    if (!text) {
-
+    if (
+      !text
+    ) {
       log.textContent =
         "Type a message first";
 
       return;
     }
 
-
     sendButton.disabled =
       true;
 
-
     sendButton.textContent =
       "Sending...";
-
 
     const state =
       await sendAndSync(
         `TEXT:${text}`
       );
 
-
-    if (state) {
-
+    if (
+      state
+    ) {
       sendButton.textContent =
         "Sent ✓";
 
-
-      if (
+      log.textContent =
         state.scrollEnabled
-      ) {
-
-        log.textContent =
-          "Message updated";
-
-      } else {
-
-        log.textContent =
-          "Message updated — scrolling is OFF";
-      }
-
+          ? "Message updated"
+          : "Message updated — scrolling is OFF";
 
     } else {
-
       sendButton.textContent =
         "Send Message";
     }
 
-
     setTimeout(
       () => {
-
         sendButton.textContent =
           "Send Message";
-
 
         if (
           isConnected()
         ) {
-
           sendButton.disabled =
             false;
         }
       },
-
       900
     );
   }
@@ -987,24 +976,20 @@ sendButton.addEventListener(
 
 
 // ======================================================
-// ENTER = SEND
+// ENTER
 // ======================================================
 
 messageInput.addEventListener(
   "keydown",
   event => {
-
     if (
       event.key === "Enter"
     ) {
-
       event.preventDefault();
-
 
       if (
         !sendButton.disabled
       ) {
-
         sendButton.click();
       }
     }
@@ -1019,20 +1004,16 @@ messageInput.addEventListener(
 scrollToggle.addEventListener(
   "change",
   async () => {
-
     const requestedState =
       scrollToggle.checked;
 
-
     scrollToggle.disabled =
       true;
-
 
     log.textContent =
       requestedState
         ? "Turning scrolling on..."
         : "Turning scrolling off...";
-
 
     const state =
       await sendAndSync(
@@ -1041,36 +1022,33 @@ scrollToggle.addEventListener(
           : "SCROLL:OFF"
       );
 
-
-    if (state) {
-
+    if (
+      state
+    ) {
       if (
         !requestedState &&
         state.scrollEnabled
       ) {
-
         log.textContent =
           "Message is too long — scrolling stays ON";
+      }
 
-      } else if (
+      else if (
         state.scrollEnabled
       ) {
-
         log.textContent =
           "Scrolling ON";
+      }
 
-      } else {
-
+      else {
         log.textContent =
           "Scrolling OFF";
       }
     }
 
-
     if (
       isConnected()
     ) {
-
       scrollToggle.disabled =
         false;
     }
@@ -1085,14 +1063,11 @@ scrollToggle.addEventListener(
 displayToggle.addEventListener(
   "change",
   async () => {
-
     const requestedState =
       displayToggle.checked;
 
-
     displayToggle.disabled =
       true;
-
 
     const state =
       await sendAndSync(
@@ -1101,20 +1076,18 @@ displayToggle.addEventListener(
           : "DISPLAY:OFF"
       );
 
-
-    if (state) {
-
+    if (
+      state
+    ) {
       log.textContent =
         state.displayEnabled
           ? "Display ON"
           : "Display OFF";
     }
 
-
     if (
       isConnected()
     ) {
-
       displayToggle.disabled =
         false;
     }
@@ -1123,8 +1096,13 @@ displayToggle.addEventListener(
 
 
 // ======================================================
-// INITIAL UI
+// INITIAL
 // ======================================================
+
+updateBatteryUI(
+  null,
+  null
+);
 
 setConnectionStatus(
   false

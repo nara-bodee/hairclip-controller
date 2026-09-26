@@ -1,256 +1,50 @@
 #include <TFT_eSPI.h>
-#include <math.h>
 
 #define TFT_BL 4
 
+#define BATTERY_ADC_EN 14
+#define BATTERY_ADC_PIN 34
+
 TFT_eSPI tft = TFT_eSPI();
-TFT_eSprite sprite = TFT_eSprite(&tft);
 
 
 // ======================================================
-// HEART
+// READ BATTERY VOLTAGE
 // ======================================================
 
-void drawHeart(int x, int y, uint16_t color) {
+float readBatteryVoltage() {
 
-  sprite.fillCircle(
-    x - 6,
-    y - 4,
-    7,
-    color
-  );
+  const int samples = 20;
 
-  sprite.fillCircle(
-    x + 6,
-    y - 4,
-    7,
-    color
-  );
+  uint32_t totalMilliVolts = 0;
 
-  sprite.fillTriangle(
-    x - 13,
-    y - 2,
-    x + 13,
-    y - 2,
-    x,
-    y + 16,
-    color
-  );
-}
+  for (int i = 0; i < samples; i++) {
 
+    totalMilliVolts +=
+      analogReadMilliVolts(
+        BATTERY_ADC_PIN
+      );
 
-// ======================================================
-// STAR
-// ======================================================
-
-void drawStar(int cx, int cy, uint16_t color) {
-
-  const int points = 10;
-
-  int px[points];
-  int py[points];
-
-  for (int i = 0; i < points; i++) {
-
-    float angle =
-      -PI / 2
-      + i * PI / 5;
-
-    float radius =
-      (i % 2 == 0)
-        ? 15
-        : 7;
-
-    px[i] =
-      cx
-      + cos(angle) * radius;
-
-    py[i] =
-      cy
-      + sin(angle) * radius;
+    delay(5);
   }
 
-  for (int i = 0; i < points; i++) {
 
-    int next =
-      (i + 1) % points;
-
-    sprite.drawLine(
-      px[i],
-      py[i],
-      px[next],
-      py[next],
-      color
-    );
-  }
-}
+  float averageMilliVolts =
+    totalMilliVolts /
+    (float)samples;
 
 
-// ======================================================
-// SMILE
-// ======================================================
-
-void drawSmile(int x, int y, uint16_t color) {
-
-  sprite.drawCircle(
-    x,
-    y,
-    15,
-    color
-  );
-
-  sprite.fillCircle(
-    x - 5,
-    y - 4,
-    2,
-    color
-  );
-
-  sprite.fillCircle(
-    x + 5,
-    y - 4,
-    2,
-    color
-  );
-
-  // รอยยิ้ม
-  sprite.drawLine(
-    x - 7,
-    y + 4,
-    x - 3,
-    y + 8,
-    color
-  );
-
-  sprite.drawLine(
-    x - 3,
-    y + 8,
-    x + 3,
-    y + 8,
-    color
-  );
-
-  sprite.drawLine(
-    x + 3,
-    y + 8,
-    x + 7,
-    y + 4,
-    color
-  );
-}
+  // T-Display ใช้ voltage divider ประมาณ 1:2
+  float batteryVoltage =
+    (
+      averageMilliVolts *
+      2.0
+    )
+    /
+    1000.0;
 
 
-// ======================================================
-// SUN
-// ======================================================
-
-void drawSun(int x, int y, uint16_t color) {
-
-  sprite.drawCircle(
-    x,
-    y,
-    8,
-    color
-  );
-
-  for (int i = 0; i < 8; i++) {
-
-    float angle =
-      i * PI / 4;
-
-    int x1 =
-      x
-      + cos(angle) * 12;
-
-    int y1 =
-      y
-      + sin(angle) * 12;
-
-    int x2 =
-      x
-      + cos(angle) * 17;
-
-    int y2 =
-      y
-      + sin(angle) * 17;
-
-    sprite.drawLine(
-      x1,
-      y1,
-      x2,
-      y2,
-      color
-    );
-  }
-}
-
-
-// ======================================================
-// MOON
-// ======================================================
-
-void drawMoon(int x, int y, uint16_t color) {
-
-  sprite.fillCircle(
-    x,
-    y,
-    15,
-    color
-  );
-
-  // วงดำทับเพื่อสร้างพระจันทร์เสี้ยว
-  sprite.fillCircle(
-    x + 7,
-    y - 4,
-    14,
-    TFT_BLACK
-  );
-}
-
-
-// ======================================================
-// MUSIC
-// ======================================================
-
-void drawMusic(int x, int y, uint16_t color) {
-
-  sprite.fillCircle(
-    x - 6,
-    y + 10,
-    4,
-    color
-  );
-
-  sprite.fillCircle(
-    x + 9,
-    y + 6,
-    4,
-    color
-  );
-
-  sprite.drawLine(
-    x - 2,
-    y + 10,
-    x - 2,
-    y - 12,
-    color
-  );
-
-  sprite.drawLine(
-    x + 13,
-    y + 6,
-    x + 13,
-    y - 16,
-    color
-  );
-
-  sprite.drawLine(
-    x - 2,
-    y - 12,
-    x + 13,
-    y - 16,
-    color
-  );
+  return batteryVoltage;
 }
 
 
@@ -261,6 +55,11 @@ void drawMusic(int x, int y, uint16_t color) {
 void setup() {
 
   Serial.begin(115200);
+
+
+  // ----------------------------------------------------
+  // DISPLAY
+  // ----------------------------------------------------
 
   pinMode(
     TFT_BL,
@@ -274,72 +73,126 @@ void setup() {
 
 
   tft.init();
+
   tft.setRotation(1);
 
-  sprite.setColorDepth(16);
-
-  sprite.createSprite(
-    tft.width(),
-    tft.height()
-  );
-
-  sprite.fillSprite(
+  tft.fillScreen(
     TFT_BLACK
   );
 
 
-  // แถวบน
-  drawHeart(
-    40,
-    35,
-    TFT_WHITE
-  );
-
-  drawStar(
-    120,
-    35,
-    TFT_WHITE
-  );
-
-  drawSmile(
-    200,
-    35,
-    TFT_WHITE
+  tft.setTextColor(
+    TFT_WHITE,
+    TFT_BLACK
   );
 
 
-  // แถวล่าง
-  drawSun(
-    40,
-    95,
-    TFT_WHITE
-  );
+  // ----------------------------------------------------
+  // BATTERY ADC
+  // ----------------------------------------------------
 
-  drawMoon(
-    120,
-    95,
-    TFT_WHITE
-  );
+  pinMode(
+  BATTERY_ADC_EN,
+  OUTPUT
+);
 
-  drawMusic(
-    200,
-    95,
-    TFT_WHITE
-  );
+// เปิดวงจรวัดแบตค้างไว้
+digitalWrite(
+  BATTERY_ADC_EN,
+  HIGH
+);
 
 
-  sprite.pushSprite(
-    0,
-    0
+  pinMode(
+    BATTERY_ADC_PIN,
+    INPUT
   );
 
 
-  Serial.println(
-    "Icon test complete"
+  analogSetPinAttenuation(
+    BATTERY_ADC_PIN,
+    ADC_11db
   );
+
+
+  delay(500);
 }
 
 
+// ======================================================
+// LOOP
+// ======================================================
+
 void loop() {
 
+  float voltage =
+    readBatteryVoltage();
+
+
+  // ล้างเฉพาะส่วนข้อมูล
+  tft.fillScreen(
+    TFT_BLACK
+  );
+
+
+  // ----------------------------------------------------
+  // TITLE
+  // ----------------------------------------------------
+
+  tft.setTextDatum(
+    MC_DATUM
+  );
+
+
+  tft.setTextSize(2);
+
+
+  tft.drawString(
+    "BATTERY",
+    120,
+    35
+  );
+
+
+  // ----------------------------------------------------
+  // VOLTAGE
+  // ----------------------------------------------------
+
+  String voltageText =
+    String(
+      voltage,
+      2
+    )
+    + " V";
+
+
+  tft.setTextSize(3);
+
+
+  tft.drawString(
+    voltageText,
+    120,
+    75
+  );
+
+
+  // ----------------------------------------------------
+  // SERIAL
+  // ----------------------------------------------------
+
+  Serial.print(
+    "Battery: "
+  );
+
+  Serial.print(
+    voltage,
+    3
+  );
+
+  Serial.println(
+    " V"
+  );
+
+
+  delay(1000);
 }

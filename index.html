@@ -26,10 +26,7 @@
 
   <main class="app">
 
-    <!-- HEADER -->
-
     <header>
-
       <p class="eyebrow">
         BLE CONTROLLER
       </p>
@@ -48,11 +45,8 @@
           Disconnected
         </span>
       </div>
-
     </header>
 
-
-    <!-- CONNECT -->
 
     <button
       id="connectButton"
@@ -60,6 +54,46 @@
     >
       Connect HairClip
     </button>
+
+
+    <!-- BATTERY -->
+
+    <section class="battery-card">
+
+      <div class="battery-top">
+
+        <div>
+          <span class="battery-label">
+            BATTERY
+          </span>
+
+          <strong id="batteryPercent">
+            --%
+          </strong>
+        </div>
+
+        <span id="batteryVoltage">
+          --.-- V
+        </span>
+
+      </div>
+
+
+      <div class="battery-track">
+
+        <div
+          id="batteryFill"
+          class="battery-fill"
+        ></div>
+
+      </div>
+
+
+      <p class="battery-note">
+        Estimated from LiPo voltage
+      </p>
+
+    </section>
 
 
     <!-- MESSAGE -->
@@ -89,8 +123,6 @@
       >
 
 
-      <!-- ICON PICKER -->
-
       <div class="icon-section">
 
         <span class="icon-label">
@@ -98,7 +130,6 @@
         </span>
 
         <div
-          id="iconPicker"
           class="icon-picker"
         >
 
@@ -106,7 +137,6 @@
             type="button"
             class="icon-button"
             data-token=":heart:"
-            title="Heart"
             disabled
           >
             ♥
@@ -116,7 +146,6 @@
             type="button"
             class="icon-button"
             data-token=":star:"
-            title="Star"
             disabled
           >
             ★
@@ -126,7 +155,6 @@
             type="button"
             class="icon-button"
             data-token=":smile:"
-            title="Smile"
             disabled
           >
             ☺
@@ -136,7 +164,6 @@
             type="button"
             class="icon-button"
             data-token=":sun:"
-            title="Sun"
             disabled
           >
             ☀
@@ -146,7 +173,6 @@
             type="button"
             class="icon-button"
             data-token=":moon:"
-            title="Moon"
             disabled
           >
             ☾
@@ -156,7 +182,6 @@
             type="button"
             class="icon-button"
             data-token=":music:"
-            title="Music"
             disabled
           >
             ♪
@@ -175,19 +200,12 @@
         Send Message
       </button>
 
-
-      <p class="message-hint">
-        Thai, English and inline icons are supported.
-      </p>
-
     </section>
 
 
     <!-- CONTROLS -->
 
     <section class="card">
-
-      <!-- SCROLL -->
 
       <div class="control-row">
 
@@ -220,8 +238,6 @@
       <div class="divider"></div>
 
 
-      <!-- DISPLAY -->
-
       <div class="control-row">
 
         <div>
@@ -251,8 +267,6 @@
 
     </section>
 
-
-    <!-- ACTIVITY -->
 
     <div class="activity">
 
