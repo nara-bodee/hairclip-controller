@@ -42,10 +42,7 @@
   ===================================================== */
   
   .app {
-    width: min(
-      440px,
-      100%
-    );
+    width: min(440px, 100%);
   
     margin: 0 auto;
   
@@ -175,7 +172,7 @@
   }
   
   .send-button {
-    margin-top: 13px;
+    margin-top: 16px;
   
     background: #30d158;
   
@@ -183,7 +180,7 @@
   }
   
   button:active:not(:disabled) {
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
   
   button:disabled {
@@ -302,6 +299,76 @@
   
   
   /* =====================================================
+     ICON PICKER
+  ===================================================== */
+  
+  .icon-section {
+    margin-top: 15px;
+  }
+  
+  .icon-label {
+    display: block;
+  
+    margin-bottom: 9px;
+  
+    color: #8e8e93;
+  
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .icon-picker {
+    display: grid;
+  
+    grid-template-columns:
+      repeat(6, 1fr);
+  
+    gap: 8px;
+  }
+  
+  .icon-button {
+    aspect-ratio: 1;
+  
+    min-width: 0;
+  
+    border:
+      1px
+      solid
+      #343438;
+  
+    border-radius: 12px;
+  
+    background: #151517;
+  
+    color: white;
+  
+    font-size: 24px;
+  
+    cursor: pointer;
+  
+    transition:
+      background 0.15s,
+      transform 0.15s,
+      border-color 0.15s;
+  }
+  
+  .icon-button:hover:not(:disabled) {
+    background: #242428;
+  
+    border-color: #505057;
+  }
+  
+  .icon-button:active:not(:disabled) {
+    transform: scale(0.92);
+  }
+  
+  .icon-button:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+  
+  
+  /* =====================================================
      CONTROLS
   ===================================================== */
   
@@ -339,8 +406,7 @@
       18px
       0;
   
-    background:
-      #303034;
+    background: #303034;
   }
   
   
@@ -445,8 +511,7 @@
   
     line-height: 1.5;
   
-    word-break:
-      break-word;
+    word-break: break-word;
   }
   
   
@@ -457,11 +522,20 @@
   @media (
     max-width: 480px
   ) {
+  
     .app {
       padding-top: 35px;
     }
   
     h1 {
       font-size: 34px;
+    }
+  
+    .icon-picker {
+      gap: 6px;
+    }
+  
+    .icon-button {
+      font-size: 21px;
     }
   }

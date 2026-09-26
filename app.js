@@ -69,12 +69,18 @@ const log =
     "log"
   );
 
+const iconButtons =
+  document.querySelectorAll(
+    ".icon-button"
+  );
+
 
 // ======================================================
 // HELPERS
 // ======================================================
 
 function wait(ms) {
+
   return new Promise(
     resolve =>
       setTimeout(
@@ -86,6 +92,7 @@ function wait(ms) {
 
 
 function isConnected() {
+
   return Boolean(
     device &&
     device.gatt &&
@@ -95,13 +102,21 @@ function isConnected() {
 }
 
 
+function updateCharacterCount() {
+
+  characterCount.textContent =
+    `${messageInput.value.length} / 100`;
+}
+
+
 // ======================================================
-// CONTROL STATE
+// ENABLE / DISABLE CONTROLS
 // ======================================================
 
 function setControlsEnabled(
   enabled
 ) {
+
   messageInput.disabled =
     !enabled;
 
@@ -113,6 +128,15 @@ function setControlsEnabled(
 
   displayToggle.disabled =
     !enabled;
+
+
+  iconButtons.forEach(
+    button => {
+
+      button.disabled =
+        !enabled;
+    }
+  );
 }
 
 
@@ -123,7 +147,9 @@ function setControlsEnabled(
 function setConnectionStatus(
   connected
 ) {
+
   if (connected) {
+
     statusText.textContent =
       "Connected";
 
@@ -169,6 +195,7 @@ function setConnectionStatus(
 
 
 function clearConnection() {
+
   characteristic =
     null;
 
@@ -183,35 +210,32 @@ function clearConnection() {
 // ======================================================
 
 async function syncControllerState() {
+
   if (!characteristic) {
     return null;
   }
 
+
   try {
+
     const value =
       await characteristic.readValue();
+
 
     const response =
       new TextDecoder().decode(
         value
       );
 
-    console.log(
-      "HairClip response:",
-      response
-    );
-
-    // รูปแบบ:
-    //
-    // 1,1
-    // HELLO WORLD
 
     const newlineIndex =
       response.indexOf("\n");
 
+
     if (
       newlineIndex === -1
     ) {
+
       throw new Error(
         "Invalid HairClip response"
       );
@@ -242,6 +266,7 @@ async function syncControllerState() {
     if (
       parts.length !== 2
     ) {
+
       throw new Error(
         "Invalid state response"
       );
@@ -256,18 +281,19 @@ async function syncControllerState() {
       parts[1] === "1";
 
 
-    // Update UI
     scrollToggle.checked =
       scrollEnabled;
+
 
     displayToggle.checked =
       displayEnabled;
 
+
     messageInput.value =
       currentMessage;
 
-    characterCount.textContent =
-      `${currentMessage.length} / 100`;
+
+    updateCharacterCount();
 
 
     return {
@@ -279,6 +305,7 @@ async function syncControllerState() {
 
 
   } catch (error) {
+
     console.error(
       "State sync failed:",
       error
@@ -290,6 +317,7 @@ async function syncControllerState() {
       !device.gatt ||
       !device.gatt.connected
     ) {
+
       clearConnection();
 
       log.textContent =
@@ -307,7 +335,9 @@ async function syncControllerState() {
 // ======================================================
 
 async function connectToDevice() {
+
   if (!device) {
+
     throw new Error(
       "No Bluetooth device selected"
     );
@@ -326,9 +356,12 @@ async function connectToDevice() {
   if (
     device.gatt.connected
   ) {
+
     server =
       device.gatt;
+
   } else {
+
     server =
       await device.gatt.connect();
   }
@@ -360,14 +393,17 @@ async function connectToDevice() {
 
 
   if (!state) {
+
     if (
       device.gatt.connected
     ) {
+
       log.textContent =
         "Connected, but state sync failed";
 
       return;
     }
+
 
     throw new Error(
       "Connection lost during synchronization"
@@ -387,12 +423,14 @@ async function connectToDevice() {
 // ======================================================
 
 async function selectHairClip() {
+
   log.textContent =
     "Searching for HairClip...";
 
 
   const selectedDevice =
     await navigator.bluetooth.requestDevice({
+
       filters: [
         {
           name:
@@ -422,6 +460,7 @@ async function selectHairClip() {
 // ======================================================
 
 async function connectHairClip() {
+
   if (isConnecting) {
     return;
   }
@@ -430,6 +469,7 @@ async function connectHairClip() {
   if (
     !navigator.bluetooth
   ) {
+
     log.textContent =
       "Web Bluetooth is not supported in this browser";
 
@@ -440,15 +480,19 @@ async function connectHairClip() {
   isConnecting =
     true;
 
+
   connectButton.disabled =
     true;
+
 
   manualDisconnect =
     false;
 
 
   try {
+
     if (!device) {
+
       await selectHairClip();
     }
 
@@ -457,6 +501,7 @@ async function connectHairClip() {
 
 
   } catch (error) {
+
     console.error(
       "Connection failed:",
       error
@@ -465,6 +510,7 @@ async function connectHairClip() {
 
     characteristic =
       null;
+
 
     setConnectionStatus(
       false
@@ -475,17 +521,22 @@ async function connectHairClip() {
       error.name ===
       "NotFoundError"
     ) {
+
       log.textContent =
         "Bluetooth selection cancelled";
+
     } else {
+
       log.textContent =
         `Connection failed: ${error.message}`;
     }
 
 
   } finally {
+
     isConnecting =
       false;
+
 
     connectButton.disabled =
       false;
@@ -498,6 +549,7 @@ async function connectHairClip() {
 // ======================================================
 
 function disconnectHairClip() {
+
   manualDisconnect =
     true;
 
@@ -507,8 +559,11 @@ function disconnectHairClip() {
     device.gatt &&
     device.gatt.connected
   ) {
+
     device.gatt.disconnect();
+
   } else {
+
     clearConnection();
 
     log.textContent =
@@ -522,8 +577,10 @@ function disconnectHairClip() {
 // ======================================================
 
 function handleDisconnected() {
+
   characteristic =
     null;
+
 
   setConnectionStatus(
     false
@@ -531,9 +588,12 @@ function handleDisconnected() {
 
 
   if (manualDisconnect) {
+
     log.textContent =
       "HairClip disconnected";
+
   } else {
+
     log.textContent =
       "Connection lost — tap Reconnect HairClip";
   }
@@ -551,6 +611,7 @@ function handleDisconnected() {
 function handleBleFailure(
   error
 ) {
+
   console.error(
     "BLE error:",
     error
@@ -562,15 +623,19 @@ function handleBleFailure(
     !device.gatt ||
     !device.gatt.connected
   ) {
+
     characteristic =
       null;
+
 
     setConnectionStatus(
       false
     );
 
+
     log.textContent =
       "Connection lost — tap Reconnect HairClip";
+
 
     return;
   }
@@ -588,28 +653,30 @@ function handleBleFailure(
 async function sendCommand(
   command
 ) {
+
   if (!isConnected()) {
+
     clearConnection();
+
 
     log.textContent =
       "HairClip is not connected";
+
 
     return false;
   }
 
 
   try {
+
     const encoder =
       new TextEncoder();
 
-    const data =
-      encoder.encode(
-        command
-      );
-
 
     await characteristic.writeValue(
-      data
+      encoder.encode(
+        command
+      )
     );
 
 
@@ -617,9 +684,11 @@ async function sendCommand(
 
 
   } catch (error) {
+
     handleBleFailure(
       error
     );
+
 
     return false;
   }
@@ -627,12 +696,13 @@ async function sendCommand(
 
 
 // ======================================================
-// SEND + WAIT + READ REAL STATE
+// SEND + SYNC
 // ======================================================
 
 async function sendAndSync(
   command
 ) {
+
   const success =
     await sendCommand(
       command
@@ -640,13 +710,11 @@ async function sendAndSync(
 
 
   if (!success) {
+
     return null;
   }
 
 
-  // Firmware รับ command ใน BLE callback
-  // แล้ว main loop ค่อย execute
-  // จึงรอสั้น ๆ ก่อน Read state
   await wait(
     100
   );
@@ -657,19 +725,165 @@ async function sendAndSync(
 
 
 // ======================================================
+// ICON INSERTION
+// ======================================================
+
+function insertIconToken(
+  token
+) {
+
+  if (
+    messageInput.disabled
+  ) {
+
+    return;
+  }
+
+
+  const currentValue =
+    messageInput.value;
+
+
+  const start =
+    messageInput.selectionStart
+      ?? currentValue.length;
+
+
+  const end =
+    messageInput.selectionEnd
+      ?? currentValue.length;
+
+
+  // ใส่ช่องว่างรอบ token
+  // เพื่อให้อ่านง่ายและไม่ติดคำอื่น
+  const before =
+    currentValue.slice(
+      0,
+      start
+    );
+
+
+  const after =
+    currentValue.slice(
+      end
+    );
+
+
+  const needsSpaceBefore =
+    before.length > 0 &&
+    !before.endsWith(" ");
+
+
+  const needsSpaceAfter =
+    after.length > 0 &&
+    !after.startsWith(" ");
+
+
+  let inserted =
+    token;
+
+
+  if (needsSpaceBefore) {
+
+    inserted =
+      " " + inserted;
+  }
+
+
+  if (needsSpaceAfter) {
+
+    inserted =
+      inserted + " ";
+  }
+
+
+  const newValue =
+    before +
+    inserted +
+    after;
+
+
+  // HTML maxlength = 100
+  if (
+    newValue.length > 100
+  ) {
+
+    log.textContent =
+      "Message limit reached";
+
+    return;
+  }
+
+
+  messageInput.value =
+    newValue;
+
+
+  updateCharacterCount();
+
+
+  // ย้าย cursor ไปหลัง token
+  const newCursorPosition =
+    before.length +
+    inserted.length;
+
+
+  messageInput.focus();
+
+
+  messageInput.setSelectionRange(
+    newCursorPosition,
+    newCursorPosition
+  );
+
+
+  log.textContent =
+    `Added ${token}`;
+}
+
+
+// ======================================================
+// ICON BUTTONS
+// ======================================================
+
+iconButtons.forEach(
+  button => {
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        const token =
+          button.dataset.token;
+
+
+        insertIconToken(
+          token
+        );
+      }
+    );
+  }
+);
+
+
+// ======================================================
 // CONNECT BUTTON
 // ======================================================
 
 connectButton.addEventListener(
   "click",
   async () => {
+
     if (
       device &&
       device.gatt &&
       device.gatt.connected
     ) {
+
       disconnectHairClip();
+
     } else {
+
       await connectHairClip();
     }
   }
@@ -682,10 +896,7 @@ connectButton.addEventListener(
 
 messageInput.addEventListener(
   "input",
-  () => {
-    characterCount.textContent =
-      `${messageInput.value.length} / 100`;
-  }
+  updateCharacterCount
 );
 
 
@@ -696,6 +907,7 @@ messageInput.addEventListener(
 sendButton.addEventListener(
   "click",
   async () => {
+
     const text =
       messageInput
         .value
@@ -703,6 +915,7 @@ sendButton.addEventListener(
 
 
     if (!text) {
+
       log.textContent =
         "Type a message first";
 
@@ -712,6 +925,7 @@ sendButton.addEventListener(
 
     sendButton.disabled =
       true;
+
 
     sendButton.textContent =
       "Sending...";
@@ -724,6 +938,7 @@ sendButton.addEventListener(
 
 
     if (state) {
+
       sendButton.textContent =
         "Sent ✓";
 
@@ -731,15 +946,19 @@ sendButton.addEventListener(
       if (
         state.scrollEnabled
       ) {
+
         log.textContent =
           "Message updated";
+
       } else {
+
         log.textContent =
           "Message updated — scrolling is OFF";
       }
 
 
     } else {
+
       sendButton.textContent =
         "Send Message";
     }
@@ -747,6 +966,7 @@ sendButton.addEventListener(
 
     setTimeout(
       () => {
+
         sendButton.textContent =
           "Send Message";
 
@@ -754,6 +974,7 @@ sendButton.addEventListener(
         if (
           isConnected()
         ) {
+
           sendButton.disabled =
             false;
         }
@@ -772,15 +993,18 @@ sendButton.addEventListener(
 messageInput.addEventListener(
   "keydown",
   event => {
+
     if (
       event.key === "Enter"
     ) {
+
       event.preventDefault();
 
 
       if (
         !sendButton.disabled
       ) {
+
         sendButton.click();
       }
     }
@@ -795,6 +1019,7 @@ messageInput.addEventListener(
 scrollToggle.addEventListener(
   "change",
   async () => {
+
     const requestedState =
       scrollToggle.checked;
 
@@ -818,29 +1043,24 @@ scrollToggle.addEventListener(
 
 
     if (state) {
-      // syncControllerState()
-      // ตั้ง Toggle ตามค่าจริงจาก ESP32 แล้ว
-
 
       if (
         !requestedState &&
         state.scrollEnabled
       ) {
-        // ผู้ใช้ขอ OFF
-        // แต่ ESP32 ยังคง ON
+
         log.textContent =
           "Message is too long — scrolling stays ON";
-      }
 
-      else if (
-        requestedState &&
+      } else if (
         state.scrollEnabled
       ) {
+
         log.textContent =
           "Scrolling ON";
-      }
 
-      else {
+      } else {
+
         log.textContent =
           "Scrolling OFF";
       }
@@ -850,6 +1070,7 @@ scrollToggle.addEventListener(
     if (
       isConnected()
     ) {
+
       scrollToggle.disabled =
         false;
     }
@@ -864,6 +1085,7 @@ scrollToggle.addEventListener(
 displayToggle.addEventListener(
   "change",
   async () => {
+
     const requestedState =
       displayToggle.checked;
 
@@ -881,6 +1103,7 @@ displayToggle.addEventListener(
 
 
     if (state) {
+
       log.textContent =
         state.displayEnabled
           ? "Display ON"
@@ -891,6 +1114,7 @@ displayToggle.addEventListener(
     if (
       isConnected()
     ) {
+
       displayToggle.disabled =
         false;
     }

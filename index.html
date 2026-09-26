@@ -2,7 +2,6 @@
 <html lang="en">
 
 <head>
-
   <meta charset="UTF-8">
 
   <meta
@@ -15,15 +14,12 @@
     content="#0b0c0e"
   >
 
-  <title>
-    HairClip Controller
-  </title>
+  <title>HairClip Controller</title>
 
   <link
     rel="stylesheet"
     href="style.css"
   >
-
 </head>
 
 <body>
@@ -46,17 +42,11 @@
         id="statusBadge"
         class="status-badge disconnected"
       >
+        <span class="status-dot"></span>
 
-        <span
-          class="status-dot"
-        ></span>
-
-        <span
-          id="statusText"
-        >
+        <span id="statusText">
           Disconnected
         </span>
-
       </div>
 
     </header>
@@ -88,6 +78,7 @@
 
       </div>
 
+
       <input
         id="messageInput"
         type="text"
@@ -97,6 +88,85 @@
         disabled
       >
 
+
+      <!-- ICON PICKER -->
+
+      <div class="icon-section">
+
+        <span class="icon-label">
+          Icons
+        </span>
+
+        <div
+          id="iconPicker"
+          class="icon-picker"
+        >
+
+          <button
+            type="button"
+            class="icon-button"
+            data-token=":heart:"
+            title="Heart"
+            disabled
+          >
+            ♥
+          </button>
+
+          <button
+            type="button"
+            class="icon-button"
+            data-token=":star:"
+            title="Star"
+            disabled
+          >
+            ★
+          </button>
+
+          <button
+            type="button"
+            class="icon-button"
+            data-token=":smile:"
+            title="Smile"
+            disabled
+          >
+            ☺
+          </button>
+
+          <button
+            type="button"
+            class="icon-button"
+            data-token=":sun:"
+            title="Sun"
+            disabled
+          >
+            ☀
+          </button>
+
+          <button
+            type="button"
+            class="icon-button"
+            data-token=":moon:"
+            title="Moon"
+            disabled
+          >
+            ☾
+          </button>
+
+          <button
+            type="button"
+            class="icon-button"
+            data-token=":music:"
+            title="Music"
+            disabled
+          >
+            ♪
+          </button>
+
+        </div>
+
+      </div>
+
+
       <button
         id="sendButton"
         class="send-button"
@@ -105,9 +175,9 @@
         Send Message
       </button>
 
+
       <p class="message-hint">
-        Supports Thai, English and icon tokens such as
-        :heart: :star: :smile:
+        Thai, English and inline icons are supported.
       </p>
 
     </section>
@@ -122,15 +192,13 @@
       <div class="control-row">
 
         <div>
-
           <strong>
             Scrolling
           </strong>
 
           <p>
-            Long messages will keep scrolling automatically
+            Long messages scroll automatically
           </p>
-
         </div>
 
         <label class="switch">
@@ -142,9 +210,7 @@
             disabled
           >
 
-          <span
-            class="slider"
-          ></span>
+          <span class="slider"></span>
 
         </label>
 
@@ -159,7 +225,6 @@
       <div class="control-row">
 
         <div>
-
           <strong>
             Display
           </strong>
@@ -167,7 +232,6 @@
           <p>
             Turn the screen on or off
           </p>
-
         </div>
 
         <label class="switch">
@@ -179,9 +243,7 @@
             disabled
           >
 
-          <span
-            class="slider"
-          ></span>
+          <span class="slider"></span>
 
         </label>
 
