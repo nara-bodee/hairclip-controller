@@ -93,7 +93,64 @@ function setConnectionStatus(connected) {
   }
 }
 
+// ==================== Sync State ====================
 
+async function syncControllerState() {
+
+    if (!characteristic) {
+      return;
+    }
+  
+    try {
+  
+      const value =
+        await characteristic.readValue();
+  
+      const state =
+        new TextDecoder().decode(value);
+  
+      console.log(
+        "HairClip state:",
+        state
+      );
+  
+  
+      const parts =
+        state.split(",");
+  
+  
+      if (parts.length !== 2) {
+        throw new Error(
+          "Invalid state response"
+        );
+      }
+  
+  
+      const scrollState =
+        parts[0];
+  
+      const displayState =
+        parts[1];
+  
+  
+      scrollToggle.checked =
+        scrollState === "1";
+  
+      displayToggle.checked =
+        displayState === "1";
+  
+  
+      log.textContent =
+        "HairClip state synchronized";
+  
+    } catch (error) {
+  
+      console.error(error);
+  
+      log.textContent =
+        "Connected, but state sync failed";
+    }
+  }
 // ==================== Connect ====================
 
 async function connectHairClip() {
@@ -140,17 +197,22 @@ async function connectHairClip() {
       );
 
 
-    characteristic =
+      characteristic =
       await service.getCharacteristic(
         CHARACTERISTIC_UUID
       );
-
-
+    
+    
     setConnectionStatus(true);
-
+    
+    
+    // อ่านสถานะจริงจาก HairClip
+    await syncControllerState();
+    
+    
     log.textContent =
       `Connected to ${device.name}`;
-
+      
   } catch (error) {
 
     console.error(error);
