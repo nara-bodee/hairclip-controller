@@ -1,4 +1,6 @@
 #include <TFT_eSPI.h>
+#include <U8g2_for_TFT_eSPI.h>
+
 #include <esp_sleep.h>
 #include <Preferences.h>
 
@@ -25,12 +27,14 @@
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite sprite = TFT_eSprite(&tft);
 
+// U8g2 จะวาดลง Sprite แทนวาดลงจอโดยตรง
+U8g2_for_TFT_eSPI u8f;
+
 String message = "HELLO WORLD!";
 
 int x = 0;
 int textWidth = 0;
 
-const int textSize = 3;
 const int scrollSpeed = 2;
 const int frameDelay = 25;
 
@@ -64,29 +68,354 @@ bool newCommandReady = false;
 
 
 // ======================================================
-// BLE CHARACTERISTIC CALLBACK
+// THAI SHAPING
 // ======================================================
 
-class CommandCallbacks : public BLECharacteristicCallbacks {
+// เครื่องหมายภาษาไทยที่ต้องวาดซ้อนกับตัวอักษรก่อนหน้า
+bool isThaiCombiningMark(uint16_t codepoint) {
 
-  // ----------------------------------------------------
-  // WRITE
-  // รับคำสั่งจาก Controller
-  // ----------------------------------------------------
+  // ั
+  if (codepoint == 0x0E31) {
+    return true;
+  }
 
-  void onWrite(BLECharacteristic *pCharacteristic) override {
+  // ิ ี ึ ื ุ ู ฺ
+  if (
+    codepoint >= 0x0E34 &&
+    codepoint <= 0x0E3A
+  ) {
+    return true;
+  }
+
+  // ็ ่ ้ ๊ ๋ ์ ํ ๎
+  if (
+    codepoint >= 0x0E47 &&
+    codepoint <= 0x0E4E
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+
+// ======================================================
+// UTF-8 DECODER
+// ======================================================
+
+uint16_t nextUTF8(const char *&p) {
+
+  uint8_t c =
+    (uint8_t)*p++;
+
+  // ASCII
+  if (c < 0x80) {
+    return c;
+  }
+
+  // 2-byte UTF-8
+  if (
+    (c & 0xE0) == 0xC0
+  ) {
+
+    uint16_t result =
+      (c & 0x1F) << 6;
+
+    result |=
+      (
+        (uint8_t)*p++
+        & 0x3F
+      );
+
+    return result;
+  }
+
+  // 3-byte UTF-8
+  // ภาษาไทยอยู่ในกลุ่มนี้
+  if (
+    (c & 0xF0) == 0xE0
+  ) {
+
+    uint16_t result =
+      (c & 0x0F) << 12;
+
+    result |=
+      (
+        (
+          (uint8_t)*p++
+          & 0x3F
+        )
+        << 6
+      );
+
+    result |=
+      (
+        (uint8_t)*p++
+        & 0x3F
+      );
+
+    return result;
+  }
+
+  // Emoji ส่วนใหญ่เป็น Unicode เกิน 16-bit
+  // รอบนี้ยังไม่รองรับ
+  if (
+    (c & 0xF8) == 0xF0
+  ) {
+
+    // ข้ามอีก 3 byte
+    p += 3;
+
+    return '?';
+  }
+
+  return '?';
+}
+
+
+// ======================================================
+// CODEPOINT -> UTF-8
+// ใช้สำหรับวัดความกว้าง glyph
+// ======================================================
+
+void codepointToUTF8(
+  uint16_t codepoint,
+  char *buffer
+) {
+
+  buffer[0] = '\0';
+  buffer[1] = '\0';
+  buffer[2] = '\0';
+  buffer[3] = '\0';
+
+  if (codepoint < 0x80) {
+
+    buffer[0] =
+      (char)codepoint;
+
+    return;
+  }
+
+  if (codepoint < 0x800) {
+
+    buffer[0] =
+      0xC0 |
+      (codepoint >> 6);
+
+    buffer[1] =
+      0x80 |
+      (codepoint & 0x3F);
+
+    return;
+  }
+
+  buffer[0] =
+    0xE0 |
+    (codepoint >> 12);
+
+  buffer[1] =
+    0x80 |
+    (
+      (codepoint >> 6)
+      & 0x3F
+    );
+
+  buffer[2] =
+    0x80 |
+    (codepoint & 0x3F);
+}
+
+
+// ======================================================
+// GLYPH WIDTH
+// ======================================================
+
+int getGlyphAdvance(
+  uint16_t codepoint
+) {
+
+  char utf8[4];
+
+  codepointToUTF8(
+    codepoint,
+    utf8
+  );
+
+  return u8f.getUTF8Width(
+    utf8
+  );
+}
+
+
+// ======================================================
+// MEASURE THAI / UTF-8 TEXT
+// ======================================================
+
+int measureShapedText(
+  const String &text
+) {
+
+  const char *p =
+    text.c_str();
+
+  int width = 0;
+
+  while (*p) {
+
+    uint16_t codepoint =
+      nextUTF8(p);
+
+    // สระบน/ล่าง/วรรณยุกต์
+    // ไม่เพิ่มความกว้าง
+    if (
+      isThaiCombiningMark(
+        codepoint
+      )
+    ) {
+
+      continue;
+    }
+
+    width +=
+      getGlyphAdvance(
+        codepoint
+      );
+  }
+
+  return width;
+}
+
+
+// ======================================================
+// DRAW THAI / UTF-8 TEXT
+// ======================================================
+
+int drawShapedText(
+  int startX,
+  int baselineY,
+  const String &text
+) {
+
+  int cursorX =
+    startX;
+
+  int baseX =
+    startX;
+
+  const char *p =
+    text.c_str();
+
+
+  while (*p) {
+
+    uint16_t codepoint =
+      nextUTF8(p);
+
+
+    // --------------------------------------------------
+    // Combining Mark
+    // --------------------------------------------------
+
+    if (
+      isThaiCombiningMark(
+        codepoint
+      )
+    ) {
+
+      // วาดซ้อนกับตัวก่อนหน้า
+      // โดยไม่ขยับ Cursor
+      u8f.drawGlyph(
+        baseX,
+        baselineY,
+        codepoint
+      );
+
+      continue;
+    }
+
+
+    // --------------------------------------------------
+    // Normal Character
+    // --------------------------------------------------
+
+    baseX =
+      cursorX;
+
+
+    int advance =
+      u8f.drawGlyph(
+        cursorX,
+        baselineY,
+        codepoint
+      );
+
+
+    cursorX +=
+      advance;
+  }
+
+
+  return cursorX - startX;
+}
+
+
+// ======================================================
+// CALCULATE VERTICAL CENTER
+// ======================================================
+
+int getTextBaselineY() {
+
+  int ascent =
+    u8f.getFontAscent();
+
+  int descent =
+    u8f.getFontDescent();
+
+  int fontHeight =
+    ascent - descent;
+
+  return
+    (
+      (
+        sprite.height()
+        - fontHeight
+      )
+      / 2
+    )
+    + ascent;
+}
+
+
+// ======================================================
+// BLE CALLBACK
+// ======================================================
+
+class CommandCallbacks :
+  public BLECharacteristicCallbacks {
+
+  void onWrite(
+    BLECharacteristic *pCharacteristic
+  ) override {
 
     String value =
       pCharacteristic->getValue();
 
     value.trim();
 
-    if (value.length() == 0) {
+    if (
+      value.length() == 0
+    ) {
       return;
     }
 
-    Serial.print("Received: ");
-    Serial.println(value);
+
+    Serial.print(
+      "Received: "
+    );
+
+    Serial.println(
+      value
+    );
 
 
     if (
@@ -96,8 +425,11 @@ class CommandCallbacks : public BLECharacteristicCallbacks {
       ) == pdTRUE
     ) {
 
-      pendingCommand = value;
-      newCommandReady = true;
+      pendingCommand =
+        value;
+
+      newCommandReady =
+        true;
 
       xSemaphoreGive(
         commandMutex
@@ -107,11 +439,12 @@ class CommandCallbacks : public BLECharacteristicCallbacks {
 
 
   // ----------------------------------------------------
-  // READ
-  // ส่ง State ปัจจุบันกลับ Controller
+  // Controller อ่าน State
   // ----------------------------------------------------
 
-  void onRead(BLECharacteristic *pCharacteristic) override {
+  void onRead(
+    BLECharacteristic *pCharacteristic
+  ) override {
 
     String currentMessage;
     bool currentScroll;
@@ -153,11 +486,15 @@ class CommandCallbacks : public BLECharacteristicCallbacks {
 
     String state =
       String(
-        currentScroll ? "1" : "0"
+        currentScroll
+          ? "1"
+          : "0"
       )
       + ","
       + String(
-        currentDisplay ? "1" : "0"
+        currentDisplay
+          ? "1"
+          : "0"
       )
       + "\n"
       + currentMessage;
@@ -183,9 +520,12 @@ class CommandCallbacks : public BLECharacteristicCallbacks {
 // BLE SERVER CALLBACK
 // ======================================================
 
-class ServerCallbacks : public BLEServerCallbacks {
+class ServerCallbacks :
+  public BLEServerCallbacks {
 
-  void onConnect(BLEServer *pServer) override {
+  void onConnect(
+    BLEServer *pServer
+  ) override {
 
     Serial.println(
       "BLE connected"
@@ -193,17 +533,19 @@ class ServerCallbacks : public BLEServerCallbacks {
   }
 
 
-  void onDisconnect(BLEServer *pServer) override {
+  void onDisconnect(
+    BLEServer *pServer
+  ) override {
 
     Serial.println(
       "BLE disconnected"
     );
 
-    // กลับมา Advertising ใหม่
-    // เพื่อให้ Controller reconnect ได้
+
     pServer
       ->getAdvertising()
       ->start();
+
 
     Serial.println(
       "BLE advertising restarted"
@@ -225,14 +567,12 @@ void goToSleep() {
   Serial.flush();
 
 
-  // ปิด Backlight
   digitalWrite(
     TFT_BL,
     LOW
   );
 
 
-  // รอปล่อยปุ่มก่อน
   while (
     digitalRead(
       POWER_BUTTON
@@ -246,7 +586,6 @@ void goToSleep() {
   delay(200);
 
 
-  // GPIO35 เป็น Wake source
   esp_sleep_enable_ext0_wakeup(
     GPIO_NUM_35,
     0
@@ -268,7 +607,6 @@ void setMessage(
   if (
     newMessage.length() == 0
   ) {
-
     return;
   }
 
@@ -294,21 +632,19 @@ void setMessage(
   }
 
 
-  // บันทึกลง NVS
+  // บันทึก UTF-8 ลง NVS
   preferences.putString(
     "message",
     newMessage
   );
 
 
-  // คำนวณขนาดข้อความใหม่
   textWidth =
-    sprite.textWidth(
+    measureShapedText(
       newMessage
     );
 
 
-  // เริ่มจากด้านขวา
   x =
     sprite.width();
 
@@ -319,6 +655,15 @@ void setMessage(
 
   Serial.println(
     newMessage
+  );
+
+
+  Serial.print(
+    "Text width: "
+  );
+
+  Serial.println(
+    textWidth
   );
 }
 
@@ -415,13 +760,11 @@ void setScroll(
 
   if (enabled) {
 
-    // เริ่มวิ่งใหม่จากด้านขวา
     x =
       sprite.width();
 
   } else {
 
-    // หยุดและจัดข้อความกลางจอ
     x =
       (
         sprite.width()
@@ -457,56 +800,61 @@ void handleCommand(
   if (
     command.length() == 0
   ) {
-
     return;
   }
 
 
-  // ทำ copy สำหรับเปรียบเทียบคำสั่ง
-  // โดยไม่ทำลายตัวพิมพ์ของ Message จริง
-  String normalized =
-    command;
-
-  normalized.toUpperCase();
-
-
-  // ====================================================
-  // TEXT
-  // ====================================================
+  // ----------------------------------------------------
+  // TEXT:
+  // เปลี่ยนเฉพาะ prefix เป็นตัวใหญ่
+  // ไม่แตะ UTF-8 ภาษาไทยที่อยู่ข้างหลัง
+  // ----------------------------------------------------
 
   if (
-    normalized.startsWith(
-      "TEXT:"
-    )
+    command.length() >= 5
   ) {
 
-    String newMessage =
-      command.substring(5);
+    String prefix =
+      command.substring(
+        0,
+        5
+      );
 
-    newMessage.trim();
+    prefix.toUpperCase();
 
 
     if (
-      newMessage.length() > 0
+      prefix == "TEXT:"
     ) {
 
-      setMessage(
-        newMessage
-      );
+      String newMessage =
+        command.substring(5);
+
+      newMessage.trim();
+
+
+      if (
+        newMessage.length() > 0
+      ) {
+
+        setMessage(
+          newMessage
+        );
+      }
+
+      return;
     }
-
-
-    return;
   }
 
 
-  // ====================================================
+  // ----------------------------------------------------
   // DISPLAY
-  // ====================================================
+  // ----------------------------------------------------
 
   if (
-    normalized ==
-    "DISPLAY:ON"
+    command.equalsIgnoreCase(
+      "DISPLAY:ON"
+    )
   ) {
 
     setDisplay(
@@ -518,8 +866,9 @@ void handleCommand(
 
 
   if (
-    normalized ==
-    "DISPLAY:OFF"
+    command.equalsIgnoreCase(
+      "DISPLAY:OFF"
+    )
   ) {
 
     setDisplay(
@@ -530,13 +879,14 @@ void handleCommand(
   }
 
 
-  // ====================================================
+  // ----------------------------------------------------
   // SCROLL
-  // ====================================================
+  // ----------------------------------------------------
 
   if (
-    normalized ==
-    "SCROLL:ON"
+    command.equalsIgnoreCase(
+      "SCROLL:ON"
+    )
   ) {
 
     setScroll(
@@ -548,8 +898,9 @@ void handleCommand(
 
 
   if (
-    normalized ==
-    "SCROLL:OFF"
+    command.equalsIgnoreCase(
+      "SCROLL:OFF"
+    )
   ) {
 
     setScroll(
@@ -560,12 +911,11 @@ void handleCommand(
   }
 
 
-  // ====================================================
+  // ----------------------------------------------------
   // FALLBACK
-  // ====================================================
+  // ----------------------------------------------------
 
-  // รองรับวิธีเดิม
-  // ส่งข้อความตรง ๆ โดยไม่มี TEXT:
+  // ส่งข้อความตรง ๆ ก็ยังใช้ได้
   setMessage(
     command
   );
@@ -639,47 +989,6 @@ void setup() {
 
 
   // ====================================================
-  // DEBUG STATE
-  // ====================================================
-
-  Serial.println();
-  Serial.println(
-    "Loaded state:"
-  );
-
-
-  Serial.print(
-    "Message: "
-  );
-
-  Serial.println(
-    message
-  );
-
-
-  Serial.print(
-    "Scroll: "
-  );
-
-  Serial.println(
-    scrollEnabled
-      ? "ON"
-      : "OFF"
-  );
-
-
-  Serial.print(
-    "Display: "
-  );
-
-  Serial.println(
-    displayEnabled
-      ? "ON"
-      : "OFF"
-  );
-
-
-  // ====================================================
   // DISPLAY
   // ====================================================
 
@@ -706,30 +1015,61 @@ void setup() {
   );
 
 
+  // 16-bit Sprite
+  sprite.setColorDepth(
+    16
+  );
+
+
   sprite.createSprite(
     tft.width(),
     tft.height()
   );
 
 
-  sprite.setTextSize(
-    textSize
-  );
-
-
-  sprite.setTextColor(
-    TFT_WHITE,
+  sprite.fillSprite(
     TFT_BLACK
   );
 
 
-  sprite.setTextWrap(
-    false
+  // ====================================================
+  // U8G2 -> SPRITE
+  // ====================================================
+
+  u8f.begin(
+    sprite
   );
 
 
+  // Transparent Font
+  // เพราะสระ/วรรณยุกต์ต้องวาดซ้อนกัน
+  u8f.setFontMode(
+    1
+  );
+
+
+  u8f.setFontDirection(
+    0
+  );
+
+
+  u8f.setForegroundColor(
+    TFT_WHITE
+  );
+
+
+  // Font ไทย + ASCII
+  u8f.setFont(
+    u8g2_font_etl24thai_t
+  );
+
+
+  // ====================================================
+  // TEXT WIDTH
+  // ====================================================
+
   textWidth =
-    sprite.textWidth(
+    measureShapedText(
       message
     );
 
@@ -750,6 +1090,57 @@ void setup() {
       )
       / 2;
   }
+
+
+  // ====================================================
+  // DEBUG
+  // ====================================================
+
+  Serial.println();
+
+  Serial.println(
+    "Loaded state:"
+  );
+
+
+  Serial.print(
+    "Message: "
+  );
+
+  Serial.println(
+    message
+  );
+
+
+  Serial.print(
+    "Text width: "
+  );
+
+  Serial.println(
+    textWidth
+  );
+
+
+  Serial.print(
+    "Scroll: "
+  );
+
+  Serial.println(
+    scrollEnabled
+      ? "ON"
+      : "OFF"
+  );
+
+
+  Serial.print(
+    "Display: "
+  );
+
+  Serial.println(
+    displayEnabled
+      ? "ON"
+      : "OFF"
+  );
 
 
   // ====================================================
@@ -810,12 +1201,13 @@ void setup() {
 
 
   Serial.println();
+
   Serial.println(
-    "HairClip ready!"
+    "HairClip V2.5 ready!"
   );
 
   Serial.println(
-    "Waiting for connection..."
+    "Thai UTF-8 enabled"
   );
 }
 
@@ -827,7 +1219,7 @@ void setup() {
 void loop() {
 
   // ====================================================
-  // PHYSICAL POWER BUTTON
+  // POWER BUTTON
   // ====================================================
 
   if (
@@ -851,7 +1243,7 @@ void loop() {
 
 
   // ====================================================
-  // READ BLE COMMAND
+  // BLE COMMAND
   // ====================================================
 
   String command = "";
@@ -890,10 +1282,6 @@ void loop() {
   }
 
 
-  // ====================================================
-  // EXECUTE COMMAND
-  // ====================================================
-
   if (
     executeCommand
   ) {
@@ -912,34 +1300,24 @@ void loop() {
     displayEnabled
   ) {
 
+    // วาดเฟรมใหม่ใน RAM
     sprite.fillSprite(
       TFT_BLACK
     );
 
 
-    int textHeight =
-      8 * textSize;
+    int baselineY =
+      getTextBaselineY();
 
 
-    int y =
-      (
-        sprite.height()
-        - textHeight
-      )
-      / 2;
-
-
-    sprite.setCursor(
+    drawShapedText(
       x,
-      y
-    );
-
-
-    sprite.print(
+      baselineY,
       message
     );
 
 
+    // ส่งทั้งเฟรมขึ้น TFT ทีเดียว
     sprite.pushSprite(
       0,
       0
