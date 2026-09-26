@@ -13,7 +13,6 @@
 
 #include <math.h>
 
-
 // ======================================================
 // HARDWARE
 // ======================================================
@@ -23,7 +22,6 @@
 
 #define BATTERY_ADC_EN 14
 #define BATTERY_ADC_PIN 34
-
 
 // ======================================================
 // DISPLAY
@@ -45,7 +43,6 @@ const int frameDelay = 25;
 bool displayEnabled = true;
 bool scrollEnabled = true;
 
-
 // ======================================================
 // ICON CONFIG
 // ======================================================
@@ -53,9 +50,8 @@ bool scrollEnabled = true;
 const int ICON_WIDTH = 30;
 const int ICON_GAP = 4;
 
-
 // ======================================================
-// POWER / BATTERY
+// POWER
 // ======================================================
 
 enum PowerSource {
@@ -64,32 +60,55 @@ enum PowerSource {
   POWER_EXTERNAL
 };
 
-PowerSource powerSource = POWER_UNKNOWN;
+PowerSource powerSource =
+  POWER_UNKNOWN;
 
-float batteryVoltage = 0.0f;
-int batteryPercent = -1;
+float batteryVoltage =
+  0.0f;
 
-float powerSenseVoltage = 0.0f;
+int batteryPercent =
+  -1;
 
-unsigned long lastPowerRead = 0;
+float powerSenseVoltage =
+  0.0f;
 
-const unsigned long POWER_READ_INTERVAL = 30000;
+unsigned long lastPowerRead =
+  0;
 
-// จากการทดสอบจริง:
-// Battery ≈ 4.09V
-// USB ≈ 4.69V
-//
-// LiPo 1S ปกติไม่ควรเกิน ~4.2V
-// เผื่อ ADC error เล็กน้อย จึงใช้ 4.35V เป็น threshold
-const float EXTERNAL_POWER_THRESHOLD = 4.35f;
+const unsigned long POWER_READ_INTERVAL =
+  30000;
 
+const float EXTERNAL_POWER_THRESHOLD =
+  4.35f;
+
+// ======================================================
+// RUNTIME TEST
+// ======================================================
+
+// true = กำลังจับเวลาขณะใช้แบต
+bool runtimeActive =
+  false;
+
+// millis ตอนเริ่ม/Resume session
+unsigned long runtimeStartMs =
+  0;
+
+// เวลาที่สะสมไว้ก่อนหยุด
+unsigned long runtimeFrozenSeconds =
+  0;
+
+// ค่าเริ่มต้นของ session
+int runtimeStartPercent =
+  -1;
+
+int runtimeStartMilliVolts =
+  0;
 
 // ======================================================
 // STORAGE
 // ======================================================
 
 Preferences preferences;
-
 
 // ======================================================
 // BLE
@@ -105,33 +124,62 @@ SemaphoreHandle_t commandMutex;
 SemaphoreHandle_t stateMutex;
 
 String pendingCommand = "";
-bool newCommandReady = false;
 
+bool newCommandReady =
+  false;
 
 // ======================================================
-// ICON DRAWING
+// ICONS
 // ======================================================
 
-void drawHeart(int cx, int cy, uint16_t color) {
-  sprite.fillCircle(cx - 6, cy - 4, 7, color);
-  sprite.fillCircle(cx + 6, cy - 4, 7, color);
+void drawHeart(
+  int cx,
+  int cy,
+  uint16_t color
+) {
+  sprite.fillCircle(
+    cx - 6,
+    cy - 4,
+    7,
+    color
+  );
+
+  sprite.fillCircle(
+    cx + 6,
+    cy - 4,
+    7,
+    color
+  );
 
   sprite.fillTriangle(
-    cx - 13, cy - 2,
-    cx + 13, cy - 2,
-    cx, cy + 16,
+    cx - 13,
+    cy - 2,
+
+    cx + 13,
+    cy - 2,
+
+    cx,
+    cy + 16,
+
     color
   );
 }
 
-
-void drawStar(int cx, int cy, uint16_t color) {
+void drawStar(
+  int cx,
+  int cy,
+  uint16_t color
+) {
   const int points = 10;
 
   int px[points];
   int py[points];
 
-  for (int i = 0; i < points; i++) {
+  for (
+    int i = 0;
+    i < points;
+    i++
+  ) {
     float angle =
       -PI / 2 +
       i * PI / 5;
@@ -143,58 +191,110 @@ void drawStar(int cx, int cy, uint16_t color) {
 
     px[i] =
       cx +
-      cos(angle) * radius;
+      cos(angle) *
+      radius;
 
     py[i] =
       cy +
-      sin(angle) * radius;
+      sin(angle) *
+      radius;
   }
 
-  for (int i = 0; i < points; i++) {
+  for (
+    int i = 0;
+    i < points;
+    i++
+  ) {
     int next =
-      (i + 1) % points;
+      (i + 1) %
+      points;
 
     sprite.drawLine(
       px[i],
       py[i],
+
       px[next],
       py[next],
+
       color
     );
   }
 }
 
+void drawSmile(
+  int cx,
+  int cy,
+  uint16_t color
+) {
+  sprite.drawCircle(
+    cx,
+    cy,
+    15,
+    color
+  );
 
-void drawSmile(int cx, int cy, uint16_t color) {
-  sprite.drawCircle(cx, cy, 15, color);
+  sprite.fillCircle(
+    cx - 5,
+    cy - 4,
+    2,
+    color
+  );
 
-  sprite.fillCircle(cx - 5, cy - 4, 2, color);
-  sprite.fillCircle(cx + 5, cy - 4, 2, color);
-
-  sprite.drawLine(
-    cx - 7, cy + 4,
-    cx - 3, cy + 8,
+  sprite.fillCircle(
+    cx + 5,
+    cy - 4,
+    2,
     color
   );
 
   sprite.drawLine(
-    cx - 3, cy + 8,
-    cx + 3, cy + 8,
+    cx - 7,
+    cy + 4,
+
+    cx - 3,
+    cy + 8,
+
     color
   );
 
   sprite.drawLine(
-    cx + 3, cy + 8,
-    cx + 7, cy + 4,
+    cx - 3,
+    cy + 8,
+
+    cx + 3,
+    cy + 8,
+
+    color
+  );
+
+  sprite.drawLine(
+    cx + 3,
+    cy + 8,
+
+    cx + 7,
+    cy + 4,
+
     color
   );
 }
 
+void drawSun(
+  int cx,
+  int cy,
+  uint16_t color
+) {
+  sprite.drawCircle(
+    cx,
+    cy,
+    8,
+    color
+  );
 
-void drawSun(int cx, int cy, uint16_t color) {
-  sprite.drawCircle(cx, cy, 8, color);
-
-  for (int i = 0; i < 8; i++) {
+  for (
+    int i = 0;
+    i < 8;
+    i++
+  ) {
     float angle =
       i * PI / 4;
 
@@ -224,8 +324,11 @@ void drawSun(int cx, int cy, uint16_t color) {
   }
 }
 
-
-void drawMoon(int cx, int cy, uint16_t color) {
+void drawMoon(
+  int cx,
+  int cy,
+  uint16_t color
+) {
   sprite.fillCircle(
     cx,
     cy,
@@ -241,8 +344,11 @@ void drawMoon(int cx, int cy, uint16_t color) {
   );
 }
 
-
-void drawMusic(int cx, int cy, uint16_t color) {
+void drawMusic(
+  int cx,
+  int cy,
+  uint16_t color
+) {
   sprite.fillCircle(
     cx - 6,
     cy + 10,
@@ -258,27 +364,38 @@ void drawMusic(int cx, int cy, uint16_t color) {
   );
 
   sprite.drawLine(
-    cx - 2, cy + 10,
-    cx - 2, cy - 12,
+    cx - 2,
+    cy + 10,
+
+    cx - 2,
+    cy - 12,
+
     color
   );
 
   sprite.drawLine(
-    cx + 13, cy + 6,
-    cx + 13, cy - 16,
+    cx + 13,
+    cy + 6,
+
+    cx + 13,
+    cy - 16,
+
     color
   );
 
   sprite.drawLine(
-    cx - 2, cy - 12,
-    cx + 13, cy - 16,
+    cx - 2,
+    cy - 12,
+
+    cx + 13,
+    cy - 16,
+
     color
   );
 }
 
-
 // ======================================================
-// ICON TOKENS
+// ICON TOKEN
 // ======================================================
 
 bool matchIconToken(
@@ -286,7 +403,9 @@ bool matchIconToken(
   const char *token
 ) {
   while (*token) {
-    if (*p != *token) {
+    if (
+      *p != *token
+    ) {
       return false;
     }
 
@@ -297,71 +416,164 @@ bool matchIconToken(
   return true;
 }
 
-
 int getIconTokenLength(
   const char *p
 ) {
-  if (matchIconToken(p, ":heart:")) return 7;
-  if (matchIconToken(p, ":star:")) return 6;
-  if (matchIconToken(p, ":smile:")) return 7;
-  if (matchIconToken(p, ":sun:")) return 5;
-  if (matchIconToken(p, ":moon:")) return 6;
-  if (matchIconToken(p, ":music:")) return 7;
+  if (
+    matchIconToken(
+      p,
+      ":heart:"
+    )
+  ) return 7;
+
+  if (
+    matchIconToken(
+      p,
+      ":star:"
+    )
+  ) return 6;
+
+  if (
+    matchIconToken(
+      p,
+      ":smile:"
+    )
+  ) return 7;
+
+  if (
+    matchIconToken(
+      p,
+      ":sun:"
+    )
+  ) return 5;
+
+  if (
+    matchIconToken(
+      p,
+      ":moon:"
+    )
+  ) return 6;
+
+  if (
+    matchIconToken(
+      p,
+      ":music:"
+    )
+  ) return 7;
 
   return 0;
 }
-
 
 void drawIconToken(
   const char *p,
   int cx,
   int cy
 ) {
-  if (matchIconToken(p, ":heart:")) {
-    drawHeart(cx, cy, TFT_WHITE);
+  if (
+    matchIconToken(
+      p,
+      ":heart:"
+    )
+  ) {
+    drawHeart(
+      cx,
+      cy,
+      TFT_WHITE
+    );
+
     return;
   }
 
-  if (matchIconToken(p, ":star:")) {
-    drawStar(cx, cy, TFT_WHITE);
+  if (
+    matchIconToken(
+      p,
+      ":star:"
+    )
+  ) {
+    drawStar(
+      cx,
+      cy,
+      TFT_WHITE
+    );
+
     return;
   }
 
-  if (matchIconToken(p, ":smile:")) {
-    drawSmile(cx, cy, TFT_WHITE);
+  if (
+    matchIconToken(
+      p,
+      ":smile:"
+    )
+  ) {
+    drawSmile(
+      cx,
+      cy,
+      TFT_WHITE
+    );
+
     return;
   }
 
-  if (matchIconToken(p, ":sun:")) {
-    drawSun(cx, cy, TFT_WHITE);
+  if (
+    matchIconToken(
+      p,
+      ":sun:"
+    )
+  ) {
+    drawSun(
+      cx,
+      cy,
+      TFT_WHITE
+    );
+
     return;
   }
 
-  if (matchIconToken(p, ":moon:")) {
-    drawMoon(cx, cy, TFT_WHITE);
+  if (
+    matchIconToken(
+      p,
+      ":moon:"
+    )
+  ) {
+    drawMoon(
+      cx,
+      cy,
+      TFT_WHITE
+    );
+
     return;
   }
 
-  if (matchIconToken(p, ":music:")) {
-    drawMusic(cx, cy, TFT_WHITE);
+  if (
+    matchIconToken(
+      p,
+      ":music:"
+    )
+  ) {
+    drawMusic(
+      cx,
+      cy,
+      TFT_WHITE
+    );
+
     return;
   }
 }
 
-
 // ======================================================
-// THAI SHAPING
+// THAI
 // ======================================================
 
 bool isThaiCombiningMark(
   uint16_t codepoint
 ) {
-  // ั
-  if (codepoint == 0x0E31) {
+  if (
+    codepoint ==
+    0x0E31
+  ) {
     return true;
   }
 
-  // ิ ี ึ ื ุ ู ฺ
   if (
     codepoint >= 0x0E34 &&
     codepoint <= 0x0E3A
@@ -369,7 +581,6 @@ bool isThaiCombiningMark(
     return true;
   }
 
-  // ็ ่ ้ ๊ ๋ ์ ํ ๎
   if (
     codepoint >= 0x0E47 &&
     codepoint <= 0x0E4E
@@ -379,7 +590,6 @@ bool isThaiCombiningMark(
 
   return false;
 }
-
 
 // ======================================================
 // UTF-8
@@ -391,43 +601,69 @@ uint16_t nextUTF8(
   uint8_t c =
     (uint8_t)*p++;
 
-  if (c < 0x80) {
+  if (
+    c < 0x80
+  ) {
     return c;
   }
 
-  if ((c & 0xE0) == 0xC0) {
+  if (
+    (c & 0xE0) ==
+    0xC0
+  ) {
     uint16_t result =
-      (c & 0x1F) << 6;
+      (c & 0x1F)
+      << 6;
 
     result |=
-      ((uint8_t)*p++ & 0x3F);
+      (
+        (uint8_t)*p++
+        &
+        0x3F
+      );
 
     return result;
   }
 
-  if ((c & 0xF0) == 0xE0) {
+  if (
+    (c & 0xF0) ==
+    0xE0
+  ) {
     uint16_t result =
-      (c & 0x0F) << 12;
+      (c & 0x0F)
+      << 12;
 
     result |=
-      (((uint8_t)*p++ & 0x3F) << 6);
+      (
+        (
+          (uint8_t)*p++
+          &
+          0x3F
+        )
+        << 6
+      );
 
     result |=
-      ((uint8_t)*p++ & 0x3F);
+      (
+        (uint8_t)*p++
+        &
+        0x3F
+      );
 
     return result;
   }
 
-  // Unicode emoji 4-byte
-  // ยังไม่รองรับตรง ๆ
-  if ((c & 0xF8) == 0xF0) {
+  if (
+    (c & 0xF8) ==
+    0xF0
+  ) {
     p += 3;
+
     return '?';
   }
 
   return '?';
 }
-
 
 void codepointToUTF8(
   uint16_t codepoint,
@@ -438,41 +674,57 @@ void codepointToUTF8(
   buffer[2] = '\0';
   buffer[3] = '\0';
 
-  if (codepoint < 0x80) {
+  if (
+    codepoint < 0x80
+  ) {
     buffer[0] =
       (char)codepoint;
 
     return;
   }
 
-  if (codepoint < 0x800) {
+  if (
+    codepoint < 0x800
+  ) {
     buffer[0] =
       0xC0 |
-      (codepoint >> 6);
+      (
+        codepoint >> 6
+      );
 
     buffer[1] =
       0x80 |
-      (codepoint & 0x3F);
+      (
+        codepoint &
+        0x3F
+      );
 
     return;
   }
 
   buffer[0] =
     0xE0 |
-    (codepoint >> 12);
+    (
+      codepoint >> 12
+    );
 
   buffer[1] =
     0x80 |
     (
-      (codepoint >> 6)
-      & 0x3F
+      (
+        codepoint >> 6
+      )
+      &
+      0x3F
     );
 
   buffer[2] =
     0x80 |
-    (codepoint & 0x3F);
+    (
+      codepoint &
+      0x3F
+    );
 }
-
 
 // ======================================================
 // TEXT WIDTH
@@ -493,7 +745,6 @@ int getGlyphAdvance(
   );
 }
 
-
 int measureRichText(
   const String &text
 ) {
@@ -504,20 +755,27 @@ int measureRichText(
 
   while (*p) {
     int iconLength =
-      getIconTokenLength(p);
+      getIconTokenLength(
+        p
+      );
 
-    if (iconLength > 0) {
+    if (
+      iconLength > 0
+    ) {
       width +=
         ICON_WIDTH +
         ICON_GAP;
 
-      p += iconLength;
+      p +=
+        iconLength;
 
       continue;
     }
 
     uint16_t codepoint =
-      nextUTF8(p);
+      nextUTF8(
+        p
+      );
 
     if (
       isThaiCombiningMark(
@@ -536,9 +794,8 @@ int measureRichText(
   return width;
 }
 
-
 // ======================================================
-// DRAW RICH TEXT
+// DRAW TEXT
 // ======================================================
 
 int drawRichText(
@@ -557,15 +814,20 @@ int drawRichText(
 
   while (*p) {
     int iconLength =
-      getIconTokenLength(p);
+      getIconTokenLength(
+        p
+      );
 
-    if (iconLength > 0) {
+    if (
+      iconLength > 0
+    ) {
       int iconCenterX =
         cursorX +
         ICON_WIDTH / 2;
 
       int iconCenterY =
-        baselineY - 8;
+        baselineY -
+        8;
 
       drawIconToken(
         p,
@@ -580,13 +842,16 @@ int drawRichText(
       baseX =
         cursorX;
 
-      p += iconLength;
+      p +=
+        iconLength;
 
       continue;
     }
 
     uint16_t codepoint =
-      nextUTF8(p);
+      nextUTF8(
+        p
+      );
 
     if (
       isThaiCombiningMark(
@@ -621,11 +886,6 @@ int drawRichText(
     startX;
 }
 
-
-// ======================================================
-// TEXT Y POSITION
-// ======================================================
-
 int getTextBaselineY() {
   int ascent =
     u8f.getFontAscent();
@@ -648,17 +908,22 @@ int getTextBaselineY() {
     + ascent;
 }
 
-
 // ======================================================
-// POWER SENSE
+// BATTERY ADC
 // ======================================================
 
 float readPowerSenseVoltage() {
-  const int samples = 20;
+  const int samples =
+    20;
 
-  uint32_t totalMilliVolts = 0;
+  uint32_t totalMilliVolts =
+    0;
 
-  for (int i = 0; i < samples; i++) {
+  for (
+    int i = 0;
+    i < samples;
+    i++
+  ) {
     totalMilliVolts +=
       analogReadMilliVolts(
         BATTERY_ADC_PIN
@@ -680,9 +945,8 @@ float readPowerSenseVoltage() {
     1000.0f;
 }
 
-
 // ======================================================
-// BATTERY PERCENT
+// BATTERY %
 // ======================================================
 
 int voltageToPercent(
@@ -807,15 +1071,16 @@ int voltageToPercent(
   return 0;
 }
 
-
 // ======================================================
-// POWER SOURCE CODE
+// POWER SOURCE STRING
 // ======================================================
 
 const char *powerSourceCode(
   PowerSource source
 ) {
-  switch (source) {
+  switch (
+    source
+  ) {
     case POWER_BATTERY:
       return "BAT";
 
@@ -827,9 +1092,130 @@ const char *powerSourceCode(
   }
 }
 
+// ======================================================
+// RUNTIME HELPERS
+// ======================================================
+
+unsigned long getRuntimeSecondsUnsafe() {
+  if (
+    runtimeActive
+  ) {
+    return
+      runtimeFrozenSeconds +
+      (
+        millis() -
+        runtimeStartMs
+      )
+      / 1000UL;
+  }
+
+  return
+    runtimeFrozenSeconds;
+}
+
+void startNewRuntimeSessionUnsafe(
+  int startPercent,
+  int startMilliVolts
+) {
+  runtimeActive =
+    true;
+
+  runtimeStartMs =
+    millis();
+
+  runtimeFrozenSeconds =
+    0;
+
+  runtimeStartPercent =
+    startPercent;
+
+  runtimeStartMilliVolts =
+    startMilliVolts;
+
+  Serial.println(
+    "Runtime session started"
+  );
+}
+
+void stopRuntimeSessionUnsafe() {
+  if (
+    !runtimeActive
+  ) {
+    return;
+  }
+
+  runtimeFrozenSeconds =
+    getRuntimeSecondsUnsafe();
+
+  runtimeActive =
+    false;
+
+  Serial.print(
+    "Runtime session paused at "
+  );
+
+  Serial.print(
+    runtimeFrozenSeconds
+  );
+
+  Serial.println(
+    " seconds"
+  );
+}
+
+void resetRuntimeSession() {
+  if (
+    xSemaphoreTake(
+      stateMutex,
+      pdMS_TO_TICKS(100)
+    ) ==
+    pdTRUE
+  ) {
+    runtimeFrozenSeconds =
+      0;
+
+    if (
+      powerSource ==
+      POWER_BATTERY
+    ) {
+      runtimeActive =
+        true;
+
+      runtimeStartMs =
+        millis();
+
+      runtimeStartPercent =
+        batteryPercent;
+
+      runtimeStartMilliVolts =
+        round(
+          batteryVoltage *
+          1000.0f
+        );
+
+    } else {
+      runtimeActive =
+        false;
+
+      runtimeStartPercent =
+        -1;
+
+      runtimeStartMilliVolts =
+        0;
+    }
+
+    xSemaphoreGive(
+      stateMutex
+    );
+  }
+
+  Serial.println(
+    "Runtime test reset"
+  );
+}
 
 // ======================================================
-// UPDATE POWER READING
+// UPDATE POWER
 // ======================================================
 
 void updatePowerReading() {
@@ -846,13 +1232,10 @@ void updatePowerReading() {
     -1;
 
 
-  // --------------------------------------------------
-  // BATTERY
-  // --------------------------------------------------
-
   if (
     measuredVoltage >= 2.50f &&
-    measuredVoltage <= EXTERNAL_POWER_THRESHOLD
+    measuredVoltage <=
+    EXTERNAL_POWER_THRESHOLD
   ) {
     newSource =
       POWER_BATTERY;
@@ -866,13 +1249,9 @@ void updatePowerReading() {
       );
   }
 
-
-  // --------------------------------------------------
-  // EXTERNAL / USB POWER
-  // --------------------------------------------------
-
   else if (
-    measuredVoltage > EXTERNAL_POWER_THRESHOLD &&
+    measuredVoltage >
+    EXTERNAL_POWER_THRESHOLD &&
     measuredVoltage <= 5.50f
   ) {
     newSource =
@@ -880,16 +1259,51 @@ void updatePowerReading() {
   }
 
 
-  // --------------------------------------------------
-  // STORE
-  // --------------------------------------------------
-
   if (
     xSemaphoreTake(
       stateMutex,
       pdMS_TO_TICKS(100)
-    ) == pdTRUE
+    ) ==
+    pdTRUE
   ) {
+    PowerSource oldSource =
+      powerSource;
+
+
+    // ----------------------------------------------
+    // Transition -> BATTERY
+    // ----------------------------------------------
+
+    if (
+      newSource ==
+      POWER_BATTERY &&
+      oldSource !=
+      POWER_BATTERY
+    ) {
+      startNewRuntimeSessionUnsafe(
+        newBatteryPercent,
+        round(
+          newBatteryVoltage *
+          1000.0f
+        )
+      );
+    }
+
+
+    // ----------------------------------------------
+    // Transition -> USB / UNKNOWN
+    // ----------------------------------------------
+
+    if (
+      newSource !=
+      POWER_BATTERY &&
+      oldSource ==
+      POWER_BATTERY
+    ) {
+      stopRuntimeSessionUnsafe();
+    }
+
+
     powerSenseVoltage =
       measuredVoltage;
 
@@ -901,29 +1315,13 @@ void updatePowerReading() {
 
     batteryPercent =
       newBatteryPercent;
+
 
     xSemaphoreGive(
       stateMutex
     );
-
-  } else {
-    powerSenseVoltage =
-      measuredVoltage;
-
-    powerSource =
-      newSource;
-
-    batteryVoltage =
-      newBatteryVoltage;
-
-    batteryPercent =
-      newBatteryPercent;
   }
 
-
-  // --------------------------------------------------
-  // DEBUG
-  // --------------------------------------------------
 
   Serial.print(
     "Power sense: "
@@ -971,16 +1369,14 @@ void updatePowerReading() {
     );
   }
 
-
   else if (
     newSource ==
     POWER_EXTERNAL
   ) {
     Serial.println(
-      "External power detected — battery percentage unavailable"
+      "External power detected"
     );
   }
-
 
   else {
     Serial.println(
@@ -989,9 +1385,8 @@ void updatePowerReading() {
   }
 }
 
-
 // ======================================================
-// BLE CALLBACKS
+// BLE CALLBACK
 // ======================================================
 
 class CommandCallbacks :
@@ -1023,7 +1418,8 @@ class CommandCallbacks :
       xSemaphoreTake(
         commandMutex,
         pdMS_TO_TICKS(100)
-      ) == pdTRUE
+      ) ==
+      pdTRUE
     ) {
       pendingCommand =
         value;
@@ -1052,12 +1448,21 @@ class CommandCallbacks :
     int currentBatteryMilliVolts;
     int currentSenseMilliVolts;
 
+    bool currentRuntimeActive;
+
+    unsigned long currentRuntimeSeconds;
+
+    int currentRuntimeStartPercent;
+
+    int currentRuntimeStartMilliVolts;
+
 
     if (
       xSemaphoreTake(
         stateMutex,
         pdMS_TO_TICKS(100)
-      ) == pdTRUE
+      ) ==
+      pdTRUE
     ) {
       currentMessage =
         message;
@@ -1085,6 +1490,18 @@ class CommandCallbacks :
           powerSenseVoltage *
           1000.0f
         );
+
+      currentRuntimeActive =
+        runtimeActive;
+
+      currentRuntimeSeconds =
+        getRuntimeSecondsUnsafe();
+
+      currentRuntimeStartPercent =
+        runtimeStartPercent;
+
+      currentRuntimeStartMilliVolts =
+        runtimeStartMilliVolts;
 
       xSemaphoreGive(
         stateMutex
@@ -1117,20 +1534,34 @@ class CommandCallbacks :
           powerSenseVoltage *
           1000.0f
         );
+
+      currentRuntimeActive =
+        runtimeActive;
+
+      currentRuntimeSeconds =
+        getRuntimeSecondsUnsafe();
+
+      currentRuntimeStartPercent =
+        runtimeStartPercent;
+
+      currentRuntimeStartMilliVolts =
+        runtimeStartMilliVolts;
     }
 
 
     // ==================================================
-    // STATE FORMAT V2.8.2
+    // V2.9 STATE FORMAT
     //
-    // scroll,display,source,percent,batteryMV,senseMV
-    // message
-    //
-    // Battery:
-    // 1,1,BAT,86,4090,4090
-    //
-    // USB:
-    // 1,1,USB,-1,0,4695
+    // scroll
+    // display
+    // source
+    // percent
+    // batteryMV
+    // senseMV
+    // runtimeActive
+    // runtimeSeconds
+    // runtimeStartPercent
+    // runtimeStartMV
     //
     // ==================================================
 
@@ -1162,6 +1593,24 @@ class CommandCallbacks :
       + String(
         currentSenseMilliVolts
       )
+      + ","
+      + String(
+        currentRuntimeActive
+          ? "1"
+          : "0"
+      )
+      + ","
+      + String(
+        currentRuntimeSeconds
+      )
+      + ","
+      + String(
+        currentRuntimeStartPercent
+      )
+      + ","
+      + String(
+        currentRuntimeStartMilliVolts
+      )
       + "\n"
       + currentMessage;
 
@@ -1181,9 +1630,8 @@ class CommandCallbacks :
   }
 };
 
-
 // ======================================================
-// BLE SERVER CALLBACKS
+// BLE SERVER
 // ======================================================
 
 class ServerCallbacks :
@@ -1196,7 +1644,6 @@ class ServerCallbacks :
       "BLE connected"
     );
   }
-
 
   void onDisconnect(
     BLEServer *pServer
@@ -1215,7 +1662,6 @@ class ServerCallbacks :
   }
 };
 
-
 // ======================================================
 // DEEP SLEEP
 // ======================================================
@@ -1232,7 +1678,6 @@ void goToSleep() {
     LOW
   );
 
-  // ปิดวงจรวัดตอน Sleep
   digitalWrite(
     BATTERY_ADC_EN,
     LOW
@@ -1241,7 +1686,8 @@ void goToSleep() {
   while (
     digitalRead(
       POWER_BUTTON
-    ) == LOW
+    ) ==
+    LOW
   ) {
     delay(10);
   }
@@ -1256,9 +1702,8 @@ void goToSleep() {
   esp_deep_sleep_start();
 }
 
-
 // ======================================================
-// SET MESSAGE
+// MESSAGE
 // ======================================================
 
 void setMessage(
@@ -1283,7 +1728,8 @@ void setMessage(
     xSemaphoreTake(
       stateMutex,
       pdMS_TO_TICKS(100)
-    ) == pdTRUE
+    ) ==
+    pdTRUE
   ) {
     message =
       newMessage;
@@ -1375,20 +1821,10 @@ void setMessage(
   Serial.println(
     textWidth
   );
-
-
-  if (
-    forcedScroll
-  ) {
-    Serial.println(
-      "Scrolling forced ON: message is wider than screen"
-    );
-  }
 }
 
-
 // ======================================================
-// SET DISPLAY
+// DISPLAY
 // ======================================================
 
 void setDisplay(
@@ -1398,7 +1834,8 @@ void setDisplay(
     xSemaphoreTake(
       stateMutex,
       pdMS_TO_TICKS(100)
-    ) == pdTRUE
+    ) ==
+    pdTRUE
   ) {
     displayEnabled =
       enabled;
@@ -1435,9 +1872,8 @@ void setDisplay(
   );
 }
 
-
 // ======================================================
-// SET SCROLL
+// SCROLL
 // ======================================================
 
 void setScroll(
@@ -1450,7 +1886,8 @@ void setScroll(
       xSemaphoreTake(
         stateMutex,
         pdMS_TO_TICKS(100)
-      ) == pdTRUE
+      ) ==
+      pdTRUE
     ) {
       scrollEnabled =
         true;
@@ -1488,7 +1925,8 @@ void setScroll(
       xSemaphoreTake(
         stateMutex,
         pdMS_TO_TICKS(100)
-      ) == pdTRUE
+      ) ==
+      pdTRUE
     ) {
       scrollEnabled =
         true;
@@ -1508,7 +1946,7 @@ void setScroll(
     );
 
     Serial.println(
-      "Scroll OFF rejected: message is wider than screen"
+      "Scroll OFF rejected"
     );
 
     return;
@@ -1519,7 +1957,8 @@ void setScroll(
     xSemaphoreTake(
       stateMutex,
       pdMS_TO_TICKS(100)
-    ) == pdTRUE
+    ) ==
+    pdTRUE
   ) {
     scrollEnabled =
       false;
@@ -1553,9 +1992,8 @@ void setScroll(
   );
 }
 
-
 // ======================================================
-// COMMAND HANDLER
+// COMMAND
 // ======================================================
 
 void handleCommand(
@@ -1570,7 +2008,6 @@ void handleCommand(
   }
 
 
-  // TEXT:
   if (
     command.length() >= 5
   ) {
@@ -1644,11 +2081,20 @@ void handleCommand(
   }
 
 
+  if (
+    command.equalsIgnoreCase(
+      "RUNTIME:RESET"
+    )
+  ) {
+    resetRuntimeSession();
+    return;
+  }
+
+
   setMessage(
     command
   );
 }
-
 
 // ======================================================
 // SETUP
@@ -1661,10 +2107,6 @@ void setup() {
 
   delay(200);
 
-
-  // ----------------------------------------------------
-  // BUTTON
-  // ----------------------------------------------------
 
   pinMode(
     POWER_BUTTON,
@@ -1681,17 +2123,20 @@ void setup() {
     false
   );
 
+
   message =
     preferences.getString(
       "message",
       "HELLO WORLD!"
     );
 
+
   displayEnabled =
     preferences.getBool(
       "display",
       true
     );
+
 
   scrollEnabled =
     preferences.getBool(
@@ -1707,12 +2152,13 @@ void setup() {
   commandMutex =
     xSemaphoreCreateMutex();
 
+
   stateMutex =
     xSemaphoreCreateMutex();
 
 
   // ----------------------------------------------------
-  // POWER ADC
+  // ADC
   // ----------------------------------------------------
 
   pinMode(
@@ -1720,25 +2166,29 @@ void setup() {
     OUTPUT
   );
 
-  // เปิดค้างขณะเครื่องทำงาน
+
   digitalWrite(
     BATTERY_ADC_EN,
     HIGH
   );
+
 
   pinMode(
     BATTERY_ADC_PIN,
     INPUT
   );
 
+
   analogReadResolution(
     12
   );
+
 
   analogSetPinAttenuation(
     BATTERY_ADC_PIN,
     ADC_11db
   );
+
 
   delay(500);
 
@@ -1752,6 +2202,7 @@ void setup() {
     OUTPUT
   );
 
+
   digitalWrite(
     TFT_BL,
     displayEnabled
@@ -1759,49 +2210,55 @@ void setup() {
       : LOW
   );
 
+
   tft.init();
+
 
   tft.setRotation(
     1
   );
 
+
   tft.fillScreen(
     TFT_BLACK
   );
 
+
   sprite.setColorDepth(
     16
   );
+
 
   sprite.createSprite(
     tft.width(),
     tft.height()
   );
 
+
   sprite.fillSprite(
     TFT_BLACK
   );
 
 
-  // ----------------------------------------------------
-  // FONT
-  // ----------------------------------------------------
-
   u8f.begin(
     sprite
   );
+
 
   u8f.setFontMode(
     1
   );
 
+
   u8f.setFontDirection(
     0
   );
 
+
   u8f.setForegroundColor(
     TFT_WHITE
   );
+
 
   u8f.setFont(
     u8g2_font_etl24thai_t
@@ -1809,7 +2266,7 @@ void setup() {
 
 
   // ----------------------------------------------------
-  // TEXT WIDTH
+  // MESSAGE WIDTH
   // ----------------------------------------------------
 
   textWidth =
@@ -1867,17 +2324,21 @@ void setup() {
     "HairClip-V1"
   );
 
+
   BLEServer *pServer =
     BLEDevice::createServer();
+
 
   pServer->setCallbacks(
     new ServerCallbacks()
   );
 
+
   BLEService *pService =
     pServer->createService(
       SERVICE_UUID
     );
+
 
   BLECharacteristic *pCharacteristic =
     pService->createCharacteristic(
@@ -1888,18 +2349,23 @@ void setup() {
       BLECharacteristic::PROPERTY_WRITE_NR
     );
 
+
   pCharacteristic->setCallbacks(
     new CommandCallbacks()
   );
 
+
   pService->start();
+
 
   BLEAdvertising *pAdvertising =
     pServer->getAdvertising();
 
+
   pAdvertising->addServiceUUID(
     SERVICE_UUID
   );
+
 
   pAdvertising->start();
 
@@ -1907,20 +2373,20 @@ void setup() {
   Serial.println();
 
   Serial.println(
-    "HairClip V2.8.2 ready!"
+    "HairClip V2.9B ready!"
   );
 
   Serial.println(
-    "Thai + Icons + Battery + USB Power Detection"
+    "Runtime Test Mode enabled"
   );
 }
-
 
 // ======================================================
 // LOOP
 // ======================================================
 
 void loop() {
+
   // ----------------------------------------------------
   // POWER BUTTON
   // ----------------------------------------------------
@@ -1928,14 +2394,16 @@ void loop() {
   if (
     digitalRead(
       POWER_BUTTON
-    ) == LOW
+    ) ==
+    LOW
   ) {
     delay(50);
 
     if (
       digitalRead(
         POWER_BUTTON
-      ) == LOW
+      ) ==
+      LOW
     ) {
       goToSleep();
     }
@@ -1946,7 +2414,8 @@ void loop() {
   // BLE COMMAND
   // ----------------------------------------------------
 
-  String command = "";
+  String command =
+    "";
 
   bool executeCommand =
     false;
@@ -1956,7 +2425,8 @@ void loop() {
     xSemaphoreTake(
       commandMutex,
       0
-    ) == pdTRUE
+    ) ==
+    pdTRUE
   ) {
     if (
       newCommandReady
@@ -1987,7 +2457,7 @@ void loop() {
 
 
   // ----------------------------------------------------
-  // POWER REFRESH
+  // POWER UPDATE
   // ----------------------------------------------------
 
   if (
@@ -2013,14 +2483,17 @@ void loop() {
       TFT_BLACK
     );
 
+
     int baselineY =
       getTextBaselineY();
+
 
     drawRichText(
       x,
       baselineY,
       message
     );
+
 
     sprite.pushSprite(
       0,
@@ -2033,6 +2506,7 @@ void loop() {
     ) {
       x -=
         scrollSpeed;
+
 
       if (
         x <

@@ -84,7 +84,7 @@
   
   
   /* =====================================================
-     STATUS
+     CONNECTION STATUS
   ===================================================== */
   
   .status-badge {
@@ -156,6 +156,7 @@
   
   .connect-button {
     background: #0a84ff;
+  
     color: white;
   }
   
@@ -163,6 +164,7 @@
     margin-top: 16px;
   
     background: #30d158;
+  
     color: #07160a;
   }
   
@@ -178,7 +180,7 @@
   
   
   /* =====================================================
-     POWER CARD
+     BATTERY CARD
   ===================================================== */
   
   .battery-card {
@@ -196,16 +198,51 @@
       rgba(255, 255, 255, 0.06);
   
     border-radius: 18px;
+  
+    transition:
+      border-color 0.25s,
+      box-shadow 0.25s;
   }
+  
+  
+  /* Battery warning state */
+  
+  .battery-card.warning {
+    border-color:
+      rgba(255, 214, 10, 0.4);
+  }
+  
+  
+  /* Battery critical state */
+  
+  .battery-card.critical {
+    border-color:
+      rgba(255, 69, 58, 0.55);
+  
+    box-shadow:
+      0 0 20px
+      rgba(255, 69, 58, 0.08);
+  }
+  
+  
+  /* USB state */
+  
+  .battery-card.external {
+    border-color:
+      rgba(10, 132, 255, 0.35);
+  }
+  
   
   .battery-top {
     display: flex;
   
     align-items: flex-end;
+  
     justify-content: space-between;
   
     gap: 15px;
   }
+  
   
   .battery-label {
     display: block;
@@ -220,11 +257,13 @@
     letter-spacing: 1px;
   }
   
+  
   #batteryPercent {
     display: block;
   
     font-size: 27px;
   }
+  
   
   #batteryVoltage {
     color: #8e8e93;
@@ -232,6 +271,11 @@
     font-size: 14px;
     font-weight: 600;
   }
+  
+  
+  /* =====================================================
+     BATTERY BAR
+  ===================================================== */
   
   .battery-track {
     width: 100%;
@@ -246,6 +290,7 @@
     border-radius: 999px;
   }
   
+  
   .battery-fill {
     width: 0%;
     height: 100%;
@@ -259,21 +304,83 @@
       background 0.25s;
   }
   
+  
   .battery-fill.medium {
     background: #ffd60a;
   }
   
+  
   .battery-fill.low {
+    background: #ff9f0a;
+  }
+  
+  
+  .battery-fill.critical {
     background: #ff453a;
   }
+  
   
   .battery-fill.external {
     background: #0a84ff;
   }
   
+  
+  /* =====================================================
+     BATTERY STATUS
+  ===================================================== */
+  
+  .battery-status-row {
+    display: flex;
+  
+    align-items: center;
+  
+    justify-content: space-between;
+  
+    margin-top: 11px;
+  }
+  
+  
+  .battery-status {
+    color: #8e8e93;
+  
+    font-size: 12px;
+    font-weight: 700;
+  }
+  
+  
+  .battery-status.normal {
+    color: #30d158;
+  }
+  
+  
+  .battery-status.warning {
+    color: #ffd60a;
+  }
+  
+  
+  .battery-status.low {
+    color: #ff9f0a;
+  }
+  
+  
+  .battery-status.critical {
+    color: #ff453a;
+  }
+  
+  
+  .battery-status.external {
+    color: #0a84ff;
+  }
+  
+  
+  .battery-status-icon {
+    font-size: 15px;
+  }
+  
+  
   .battery-note {
     margin:
-      8px
+      7px
       0
       0;
   
@@ -282,6 +389,69 @@
     font-size: 11px;
   
     line-height: 1.4;
+  }
+  
+  
+  /* =====================================================
+     BATTERY WARNING BOX
+  ===================================================== */
+  
+  .battery-warning {
+    margin-top: 12px;
+  
+    padding:
+      13px
+      15px;
+  
+    border:
+      1px solid
+      rgba(255, 214, 10, 0.3);
+  
+    border-radius: 14px;
+  
+    background:
+      rgba(255, 214, 10, 0.08);
+  }
+  
+  
+  .battery-warning.critical {
+    border-color:
+      rgba(255, 69, 58, 0.38);
+  
+    background:
+      rgba(255, 69, 58, 0.09);
+  }
+  
+  
+  .battery-warning strong {
+    display: block;
+  
+    margin-bottom: 4px;
+  
+    color: #ffd60a;
+  
+    font-size: 13px;
+  }
+  
+  
+  .battery-warning.critical strong {
+    color: #ff453a;
+  }
+  
+  
+  .battery-warning p {
+    margin: 0;
+  
+    color: #a2a2a8;
+  
+    font-size: 12px;
+  
+    line-height: 1.45;
+  }
+  
+  
+  .hidden {
+    display: none;
   }
   
   
@@ -313,20 +483,24 @@
     display: flex;
   
     justify-content: space-between;
+  
     align-items: center;
   
     margin-bottom: 10px;
   }
   
+  
   .section-header label {
     font-weight: 700;
   }
+  
   
   #characterCount {
     color: #777;
   
     font-size: 12px;
   }
+  
   
   #messageInput {
     width: 100%;
@@ -352,13 +526,16 @@
     font-size: 16px;
   }
   
+  
   #messageInput::placeholder {
     color: #626268;
   }
   
+  
   #messageInput:focus {
     border-color: #0a84ff;
   }
+  
   
   #messageInput:disabled {
     opacity: 0.45;
@@ -373,6 +550,7 @@
     margin-top: 15px;
   }
   
+  
   .icon-label {
     display: block;
   
@@ -384,6 +562,7 @@
     font-weight: 600;
   }
   
+  
   .icon-picker {
     display: grid;
   
@@ -392,6 +571,7 @@
   
     gap: 8px;
   }
+  
   
   .icon-button {
     aspect-ratio: 1;
@@ -417,9 +597,11 @@
       transform 0.15s;
   }
   
+  
   .icon-button:hover:not(:disabled) {
     background: #242428;
   }
+  
   
   .icon-button:active:not(:disabled) {
     transform: scale(0.92);
@@ -434,16 +616,19 @@
     display: flex;
   
     align-items: center;
+  
     justify-content: space-between;
   
     gap: 20px;
   }
+  
   
   .control-row strong {
     display: block;
   
     margin-bottom: 4px;
   }
+  
   
   .control-row p {
     margin: 0;
@@ -454,6 +639,7 @@
   
     line-height: 1.4;
   }
+  
   
   .divider {
     height: 1px;
@@ -479,9 +665,11 @@
     height: 31px;
   }
   
+  
   .switch input {
     display: none;
   }
+  
   
   .slider {
     position: absolute;
@@ -496,6 +684,7 @@
   
     transition: 0.2s;
   }
+  
   
   .slider::before {
     content: "";
@@ -515,14 +704,17 @@
     transition: 0.2s;
   }
   
+  
   .switch input:checked + .slider {
     background: #30d158;
   }
+  
   
   .switch input:checked + .slider::before {
     transform:
       translateX(21px);
   }
+  
   
   .switch input:disabled + .slider {
     opacity: 0.35;
@@ -541,6 +733,7 @@
       4px;
   }
   
+  
   .activity span {
     display: block;
   
@@ -554,6 +747,7 @@
   
     letter-spacing: 1px;
   }
+  
   
   .activity p {
     margin: 0;
@@ -589,4 +783,110 @@
     .icon-button {
       font-size: 21px;
     }
+  }
+
+
+  /* =====================================================
+   RUNTIME TEST
+===================================================== */
+
+.runtime-divider {
+    height: 1px;
+  
+    margin:
+      18px
+      0;
+  
+    background: #303034;
+  }
+  
+  
+  .runtime-header {
+    display: flex;
+  
+    justify-content: space-between;
+  
+    align-items: center;
+  
+    color: #777;
+  
+    font-size: 11px;
+  
+    font-weight: 700;
+  
+    letter-spacing: 1px;
+  }
+  
+  
+  .runtime-state {
+    color: #8e8e93;
+  
+    letter-spacing: 0;
+  }
+  
+  
+  .runtime-state.running {
+    color: #30d158;
+  }
+  
+  
+  .runtime-state.paused {
+    color: #0a84ff;
+  }
+  
+  
+  .runtime-time {
+    margin-top: 8px;
+  
+    font-size: 30px;
+  
+    font-weight: 700;
+  
+    font-variant-numeric:
+      tabular-nums;
+  }
+  
+  
+  .runtime-start {
+    margin:
+      5px
+      0
+      13px;
+  
+    color: #73737a;
+  
+    font-size: 12px;
+  }
+  
+  
+  .runtime-reset-button {
+    width: 100%;
+  
+    min-height: 42px;
+  
+    border:
+      1px solid
+      #343438;
+  
+    border-radius: 11px;
+  
+    background: #171719;
+  
+    color: #d1d1d6;
+  
+    font-weight: 600;
+  
+    cursor: pointer;
+  }
+  
+  
+  .runtime-reset-button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  
+  
+  .runtime-reset-button:disabled {
+    opacity: 0.35;
+  
+    cursor: default;
   }

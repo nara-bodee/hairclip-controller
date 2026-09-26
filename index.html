@@ -60,9 +60,12 @@
     </button>
 
 
-    <!-- BATTERY / POWER -->
+    <!-- POWER -->
 
-    <section class="battery-card">
+    <section
+      id="batteryCard"
+      class="battery-card"
+    >
 
       <div class="battery-top">
 
@@ -95,6 +98,25 @@
       </div>
 
 
+      <div class="battery-status-row">
+
+        <span
+          id="batteryStatus"
+          class="battery-status"
+        >
+          Waiting
+        </span>
+
+        <span
+          id="batteryStatusIcon"
+          class="battery-status-icon"
+        >
+          —
+        </span>
+
+      </div>
+
+
       <p
         id="batteryNote"
         class="battery-note"
@@ -102,7 +124,71 @@
         Waiting for HairClip
       </p>
 
+
+      <!-- RUNTIME -->
+
+      <div class="runtime-divider"></div>
+
+
+      <div class="runtime-header">
+
+        <span>
+          BATTERY RUNTIME
+        </span>
+
+        <span
+          id="runtimeState"
+          class="runtime-state"
+        >
+          Waiting
+        </span>
+
+      </div>
+
+
+      <div
+        id="runtimeElapsed"
+        class="runtime-time"
+      >
+        00:00:00
+      </div>
+
+
+      <p
+        id="runtimeStart"
+        class="runtime-start"
+      >
+        Connect HairClip to start
+      </p>
+
+
+      <button
+        id="runtimeResetButton"
+        class="runtime-reset-button"
+        disabled
+      >
+        Reset Runtime Test
+      </button>
+
     </section>
+
+
+    <!-- LOW BATTERY WARNING -->
+
+    <div
+      id="batteryWarning"
+      class="battery-warning hidden"
+    >
+
+      <strong id="batteryWarningTitle">
+        Low Battery
+      </strong>
+
+      <p id="batteryWarningText">
+        Consider charging your HairClip soon.
+      </p>
+
+    </div>
 
 
     <!-- MESSAGE -->
@@ -146,54 +232,42 @@
             class="icon-button"
             data-token=":heart:"
             disabled
-          >
-            ♥
-          </button>
+          >♥</button>
 
           <button
             type="button"
             class="icon-button"
             data-token=":star:"
             disabled
-          >
-            ★
-          </button>
+          >★</button>
 
           <button
             type="button"
             class="icon-button"
             data-token=":smile:"
             disabled
-          >
-            ☺
-          </button>
+          >☺</button>
 
           <button
             type="button"
             class="icon-button"
             data-token=":sun:"
             disabled
-          >
-            ☀
-          </button>
+          >☀</button>
 
           <button
             type="button"
             class="icon-button"
             data-token=":moon:"
             disabled
-          >
-            ☾
-          </button>
+          >☾</button>
 
           <button
             type="button"
             class="icon-button"
             data-token=":music:"
             disabled
-          >
-            ♪
-          </button>
+          >♪</button>
 
         </div>
 
@@ -228,7 +302,6 @@
           </p>
 
         </div>
-
 
         <label class="switch">
 
