@@ -9,15 +9,21 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
+
+// ======================================================
+// HARDWARE
+// ======================================================
+
+#define TFT_BL 4
+#define POWER_BUTTON 35
+
+
 // ======================================================
 // DISPLAY
 // ======================================================
 
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite sprite = TFT_eSprite(&tft);
-
-#define TFT_BL 4
-#define POWER_BUTTON 35
 
 String message = "HELLO WORLD!";
 
@@ -49,7 +55,9 @@ Preferences preferences;
 #define CHARACTERISTIC_UUID \
   "c7a10002-6c9e-4d5d-a001-123456789abc"
 
+
 SemaphoreHandle_t commandMutex;
+SemaphoreHandle_t stateMutex;
 
 String pendingCommand = "";
 bool newCommandReady = false;
@@ -62,12 +70,14 @@ bool newCommandReady = false;
 class CommandCallbacks : public BLECharacteristicCallbacks {
 
   // ----------------------------------------------------
-  // รับคำสั่งจากมือถือ / Web Controller
+  // WRITE
+  // รับคำสั่งจาก Controller
   // ----------------------------------------------------
 
   void onWrite(BLECharacteristic *pCharacteristic) override {
 
-    String value = pCharacteristic->getValue();
+    String value =
+      pCharacteristic->getValue();
 
     value.trim();
 
@@ -77,6 +87,7 @@ class CommandCallbacks : public BLECharacteristicCallbacks {
 
     Serial.print("Received: ");
     Serial.println(value);
+
 
     if (
       xSemaphoreTake(
@@ -88,30 +99,82 @@ class CommandCallbacks : public BLECharacteristicCallbacks {
       pendingCommand = value;
       newCommandReady = true;
 
-      xSemaphoreGive(commandMutex);
+      xSemaphoreGive(
+        commandMutex
+      );
     }
   }
 
 
   // ----------------------------------------------------
-  // ส่ง State ปัจจุบันกลับไปหา Web Controller
+  // READ
+  // ส่ง State ปัจจุบันกลับ Controller
   // ----------------------------------------------------
 
   void onRead(BLECharacteristic *pCharacteristic) override {
 
+    String currentMessage;
+    bool currentScroll;
+    bool currentDisplay;
+
+
+    if (
+      xSemaphoreTake(
+        stateMutex,
+        pdMS_TO_TICKS(100)
+      ) == pdTRUE
+    ) {
+
+      currentMessage =
+        message;
+
+      currentScroll =
+        scrollEnabled;
+
+      currentDisplay =
+        displayEnabled;
+
+      xSemaphoreGive(
+        stateMutex
+      );
+
+    } else {
+
+      currentMessage =
+        message;
+
+      currentScroll =
+        scrollEnabled;
+
+      currentDisplay =
+        displayEnabled;
+    }
+
+
     String state =
-      String(scrollEnabled ? "1" : "0")
+      String(
+        currentScroll ? "1" : "0"
+      )
       + ","
-      + String(displayEnabled ? "1" : "0")
+      + String(
+        currentDisplay ? "1" : "0"
+      )
       + "\n"
-      + message;
+      + currentMessage;
+
 
     pCharacteristic->setValue(
       state.c_str()
     );
 
-    Serial.println("State requested:");
-    Serial.println(state);
+
+    Serial.println(
+      "State requested:"
+    );
+
+    Serial.println(
+      state
+    );
   }
 };
 
@@ -124,17 +187,27 @@ class ServerCallbacks : public BLEServerCallbacks {
 
   void onConnect(BLEServer *pServer) override {
 
-    Serial.println("Phone connected!");
+    Serial.println(
+      "BLE connected"
+    );
   }
 
 
   void onDisconnect(BLEServer *pServer) override {
 
-    Serial.println("Phone disconnected!");
+    Serial.println(
+      "BLE disconnected"
+    );
 
-    // เปิด Advertising ใหม่
-    // เพื่อให้มือถือกลับมา Connect ได้อีก
-    pServer->getAdvertising()->start();
+    // กลับมา Advertising ใหม่
+    // เพื่อให้ Controller reconnect ได้
+    pServer
+      ->getAdvertising()
+      ->start();
+
+    Serial.println(
+      "BLE advertising restarted"
+    );
   }
 };
 
@@ -145,8 +218,12 @@ class ServerCallbacks : public BLEServerCallbacks {
 
 void goToSleep() {
 
-  Serial.println("Going to deep sleep...");
+  Serial.println(
+    "Going to deep sleep..."
+  );
+
   Serial.flush();
+
 
   // ปิด Backlight
   digitalWrite(
@@ -154,23 +231,215 @@ void goToSleep() {
     LOW
   );
 
-  // รอจนผู้ใช้ปล่อยปุ่ม
+
+  // รอปล่อยปุ่มก่อน
   while (
-    digitalRead(POWER_BUTTON) == LOW
+    digitalRead(
+      POWER_BUTTON
+    ) == LOW
   ) {
 
     delay(10);
   }
 
+
   delay(200);
 
-  // GPIO35 ใช้เป็น Wake source
+
+  // GPIO35 เป็น Wake source
   esp_sleep_enable_ext0_wakeup(
     GPIO_NUM_35,
     0
   );
 
+
   esp_deep_sleep_start();
+}
+
+
+// ======================================================
+// SET MESSAGE
+// ======================================================
+
+void setMessage(
+  const String &newMessage
+) {
+
+  if (
+    newMessage.length() == 0
+  ) {
+
+    return;
+  }
+
+
+  if (
+    xSemaphoreTake(
+      stateMutex,
+      pdMS_TO_TICKS(100)
+    ) == pdTRUE
+  ) {
+
+    message =
+      newMessage;
+
+    xSemaphoreGive(
+      stateMutex
+    );
+
+  } else {
+
+    message =
+      newMessage;
+  }
+
+
+  // บันทึกลง NVS
+  preferences.putString(
+    "message",
+    newMessage
+  );
+
+
+  // คำนวณขนาดข้อความใหม่
+  textWidth =
+    sprite.textWidth(
+      newMessage
+    );
+
+
+  // เริ่มจากด้านขวา
+  x =
+    sprite.width();
+
+
+  Serial.print(
+    "Message changed: "
+  );
+
+  Serial.println(
+    newMessage
+  );
+}
+
+
+// ======================================================
+// SET DISPLAY
+// ======================================================
+
+void setDisplay(
+  bool enabled
+) {
+
+  if (
+    xSemaphoreTake(
+      stateMutex,
+      pdMS_TO_TICKS(100)
+    ) == pdTRUE
+  ) {
+
+    displayEnabled =
+      enabled;
+
+    xSemaphoreGive(
+      stateMutex
+    );
+
+  } else {
+
+    displayEnabled =
+      enabled;
+  }
+
+
+  preferences.putBool(
+    "display",
+    enabled
+  );
+
+
+  digitalWrite(
+    TFT_BL,
+    enabled
+      ? HIGH
+      : LOW
+  );
+
+
+  Serial.print(
+    "Display: "
+  );
+
+  Serial.println(
+    enabled
+      ? "ON"
+      : "OFF"
+  );
+}
+
+
+// ======================================================
+// SET SCROLL
+// ======================================================
+
+void setScroll(
+  bool enabled
+) {
+
+  if (
+    xSemaphoreTake(
+      stateMutex,
+      pdMS_TO_TICKS(100)
+    ) == pdTRUE
+  ) {
+
+    scrollEnabled =
+      enabled;
+
+    xSemaphoreGive(
+      stateMutex
+    );
+
+  } else {
+
+    scrollEnabled =
+      enabled;
+  }
+
+
+  preferences.putBool(
+    "scroll",
+    enabled
+  );
+
+
+  if (enabled) {
+
+    // เริ่มวิ่งใหม่จากด้านขวา
+    x =
+      sprite.width();
+
+  } else {
+
+    // หยุดและจัดข้อความกลางจอ
+    x =
+      (
+        sprite.width()
+        - textWidth
+      )
+      / 2;
+  }
+
+
+  Serial.print(
+    "Scroll: "
+  );
+
+  Serial.println(
+    enabled
+      ? "ON"
+      : "OFF"
+  );
 }
 
 
@@ -178,9 +447,27 @@ void goToSleep() {
 // COMMAND HANDLER
 // ======================================================
 
-void handleCommand(String command) {
+void handleCommand(
+  String command
+) {
 
   command.trim();
+
+
+  if (
+    command.length() == 0
+  ) {
+
+    return;
+  }
+
+
+  // ทำ copy สำหรับเปรียบเทียบคำสั่ง
+  // โดยไม่ทำลายตัวพิมพ์ของ Message จริง
+  String normalized =
+    command;
+
+  normalized.toUpperCase();
 
 
   // ====================================================
@@ -188,7 +475,9 @@ void handleCommand(String command) {
   // ====================================================
 
   if (
-    command.startsWith("TEXT:")
+    normalized.startsWith(
+      "TEXT:"
+    )
   ) {
 
     String newMessage =
@@ -196,142 +485,75 @@ void handleCommand(String command) {
 
     newMessage.trim();
 
+
     if (
       newMessage.length() > 0
     ) {
 
-      message = newMessage;
-
-      // บันทึกข้อความลง Flash
-      preferences.putString(
-        "message",
-        message
-      );
-
-      // คำนวณความกว้างใหม่
-      textWidth =
-        sprite.textWidth(message);
-
-      // ให้ข้อความใหม่เริ่มจากขวา
-      x = sprite.width();
-
-      Serial.print(
-        "New text: "
-      );
-
-      Serial.println(
-        message
+      setMessage(
+        newMessage
       );
     }
 
+
     return;
   }
 
 
   // ====================================================
-  // DISPLAY ON
+  // DISPLAY
   // ====================================================
 
   if (
-    command == "DISPLAY:ON"
+    normalized ==
+    "DISPLAY:ON"
   ) {
 
-    displayEnabled = true;
-
-    preferences.putBool(
-      "display",
+    setDisplay(
       true
     );
 
-    digitalWrite(
-      TFT_BL,
-      HIGH
-    );
-
-    Serial.println(
-      "Display ON"
-    );
-
     return;
   }
 
 
-  // ====================================================
-  // DISPLAY OFF
-  // ====================================================
-
   if (
-    command == "DISPLAY:OFF"
+    normalized ==
+    "DISPLAY:OFF"
   ) {
 
-    displayEnabled = false;
-
-    preferences.putBool(
-      "display",
+    setDisplay(
       false
     );
 
-    digitalWrite(
-      TFT_BL,
-      LOW
-    );
-
-    Serial.println(
-      "Display OFF"
-    );
-
     return;
   }
 
 
   // ====================================================
-  // SCROLL ON
+  // SCROLL
   // ====================================================
 
   if (
-    command == "SCROLL:ON"
+    normalized ==
+    "SCROLL:ON"
   ) {
 
-    scrollEnabled = true;
-
-    preferences.putBool(
-      "scroll",
+    setScroll(
       true
     );
 
-    // เริ่มจากทางขวาใหม่
-    x = sprite.width();
-
-    Serial.println(
-      "Scroll ON"
-    );
-
     return;
   }
 
 
-  // ====================================================
-  // SCROLL OFF
-  // ====================================================
-
   if (
-    command == "SCROLL:OFF"
+    normalized ==
+    "SCROLL:OFF"
   ) {
 
-    scrollEnabled = false;
-
-    preferences.putBool(
-      "scroll",
+    setScroll(
       false
-    );
-
-    // จัดข้อความให้อยู่ตรงกลาง
-    x =
-      (sprite.width() - textWidth)
-      / 2;
-
-    Serial.println(
-      "Scroll OFF"
     );
 
     return;
@@ -342,26 +564,10 @@ void handleCommand(String command) {
   // FALLBACK
   // ====================================================
 
-  // รองรับการส่งข้อความแบบเก่า
-  // เช่นส่ง "HELLO" มาโดยไม่มี TEXT:
-  message = command;
-
-  preferences.putString(
-    "message",
-    message
-  );
-
-  textWidth =
-    sprite.textWidth(message);
-
-  x = sprite.width();
-
-  Serial.print(
-    "Raw text: "
-  );
-
-  Serial.println(
-    message
+  // รองรับวิธีเดิม
+  // ส่งข้อความตรง ๆ โดยไม่มี TEXT:
+  setMessage(
+    command
   );
 }
 
@@ -372,13 +578,15 @@ void handleCommand(String command) {
 
 void setup() {
 
-  Serial.begin(115200);
+  Serial.begin(
+    115200
+  );
 
   delay(200);
 
 
   // ====================================================
-  // POWER BUTTON
+  // BUTTON
   // ====================================================
 
   pinMode(
@@ -388,7 +596,7 @@ void setup() {
 
 
   // ====================================================
-  // NVS STORAGE
+  // STORAGE
   // ====================================================
 
   preferences.begin(
@@ -397,7 +605,6 @@ void setup() {
   );
 
 
-  // โหลด Message ล่าสุด
   message =
     preferences.getString(
       "message",
@@ -405,7 +612,6 @@ void setup() {
     );
 
 
-  // โหลดสถานะ Display ล่าสุด
   displayEnabled =
     preferences.getBool(
       "display",
@@ -413,7 +619,6 @@ void setup() {
     );
 
 
-  // โหลดสถานะ Scroll ล่าสุด
   scrollEnabled =
     preferences.getBool(
       "scroll",
@@ -421,9 +626,27 @@ void setup() {
     );
 
 
+  // ====================================================
+  // MUTEX
+  // ====================================================
+
+  commandMutex =
+    xSemaphoreCreateMutex();
+
+
+  stateMutex =
+    xSemaphoreCreateMutex();
+
+
+  // ====================================================
+  // DEBUG STATE
+  // ====================================================
+
+  Serial.println();
   Serial.println(
     "Loaded state:"
   );
+
 
   Serial.print(
     "Message: "
@@ -432,6 +655,7 @@ void setup() {
   Serial.println(
     message
   );
+
 
   Serial.print(
     "Scroll: "
@@ -442,6 +666,7 @@ void setup() {
       ? "ON"
       : "OFF"
   );
+
 
   Serial.print(
     "Display: "
@@ -481,7 +706,6 @@ void setup() {
   );
 
 
-  // สร้าง Sprite เท่าขนาดจอ
   sprite.createSprite(
     tft.width(),
     tft.height()
@@ -499,7 +723,6 @@ void setup() {
   );
 
 
-  // ไม่ให้ตัดข้อความขึ้นบรรทัดใหม่
   sprite.setTextWrap(
     false
   );
@@ -527,14 +750,6 @@ void setup() {
       )
       / 2;
   }
-
-
-  // ====================================================
-  // COMMAND MUTEX
-  // ====================================================
-
-  commandMutex =
-    xSemaphoreCreateMutex();
 
 
   // ====================================================
@@ -623,6 +838,7 @@ void loop() {
 
     delay(50);
 
+
     if (
       digitalRead(
         POWER_BUTTON
@@ -635,7 +851,7 @@ void loop() {
 
 
   // ====================================================
-  // READ PENDING BLE COMMAND
+  // READ BLE COMMAND
   // ====================================================
 
   String command = "";
@@ -658,12 +874,15 @@ void loop() {
       command =
         pendingCommand;
 
+
       newCommandReady =
         false;
+
 
       executeCommand =
         true;
     }
+
 
     xSemaphoreGive(
       commandMutex
@@ -693,7 +912,6 @@ void loop() {
     displayEnabled
   ) {
 
-    // ล้าง Sprite ใน RAM
     sprite.fillSprite(
       TFT_BLACK
     );
@@ -722,7 +940,6 @@ void loop() {
     );
 
 
-    // ส่ง Frame ขึ้นจอ
     sprite.pushSprite(
       0,
       0
@@ -737,7 +954,8 @@ void loop() {
       scrollEnabled
     ) {
 
-      x -= scrollSpeed;
+      x -=
+        scrollSpeed;
 
 
       if (
